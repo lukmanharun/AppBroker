@@ -1,8 +1,8 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace AppBroker.Models
+namespace AppBroker.BusinessCore.Entity.DTO
 {
-    public class SignInForm
+    public class SignInDTO
     {
         [Required(AllowEmptyStrings = false)]
         public string Email { get; set; }

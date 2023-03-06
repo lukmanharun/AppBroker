@@ -3,21 +3,9 @@
     public class JwtSetting
     {
         public string SecretKey { get; set; }
+        public string lifetimeToken { get; set; }
+        public string IsUser { get; set; }
+        public string Audience { get; set; }
     }
-    public class Car
-    {
-        public string Name { get; set; }
-        public virtual string GetNo()
-        {
-            return "Car";
-        }
-    }
-    public class SparePart:Car
-    {
-        public override string GetNo()
-        {
-            return "Oil";
-        }
-    }
-
+    
 }

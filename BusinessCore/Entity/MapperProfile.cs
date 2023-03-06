@@ -1,5 +1,6 @@
 ﻿using AppBroker.BusinessCore.Entity.DTO;
 using AutoMapper;
+using BusinessCore.Entity.DTO;
 using Infrastructure.Entity;
 using System;
 using System.Collections.Generic;
@@ -13,7 +14,11 @@ namespace BusinessCore.Entity
     {
         public MapperProfile()
         {
+            #region User
             CreateMap<AspNetUser, RegisterDTO>().ReverseMap();
+            CreateMap<AspNetUser, UserListDTO>().ReverseMap();
+            CreateMap<AspNetUser, UserSubmitDTO>().ReverseMap();
+            #endregion
         }
     }
 }

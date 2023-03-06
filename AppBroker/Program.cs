@@ -9,13 +9,22 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
+using Serilog.Sinks.MSSqlServer;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
+var conDefault = builder.Configuration.GetConnectionString("Default");
 #region Serilog
 
 string environment = string.Empty;
 if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == null) throw new Exception("Environtment object null");
+ColumnOptions columnOptions = new ColumnOptions();
+columnOptions.Store.Remove(StandardColumn.Properties);
+columnOptions.Store.Add(StandardColumn.LogEvent);
+columnOptions.LogEvent.DataLength = 2048;
+columnOptions.PrimaryKey = columnOptions.TimeStamp;
+columnOptions.TimeStamp.NonClusteredIndex = true;
+
 Log.Logger = new LoggerConfiguration()
     .Enrich.FromLogContext()
     .WriteTo.Debug()
@@ -24,6 +33,14 @@ Log.Logger = new LoggerConfiguration()
         rollingInterval: RollingInterval.Day,
         rollOnFileSizeLimit: true,
         restrictedToMinimumLevel: Serilog.Events.LogEventLevel.Error)
+    .WriteTo.MSSqlServer(
+        connectionString: conDefault,
+        sinkOptions: new Serilog.Sinks.MSSqlServer.MSSqlServerSinkOptions
+        {
+            TableName = "Logs"
+        },
+        columnOptions:columnOptions
+    )
     //.WriteTo.Elasticsearch(ConfigureElasticSink(configuration, environment))
     .Enrich.WithProperty("Environment", environment)
     .ReadFrom.Configuration(new ConfigurationBuilder()
@@ -38,7 +55,6 @@ builder.Host.UseSerilog();
 #endregion
 
 var appSettingSection = builder.Configuration.GetSection("JwtSetting");
-var conDefault = builder.Configuration.GetConnectionString("Default");
 builder.Services.AddDbContextPool<AppDbContext>(opt =>
 {
     opt.UseSqlServer(conDefault);

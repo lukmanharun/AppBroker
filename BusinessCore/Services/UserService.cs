@@ -1,5 +1,6 @@
 ﻿using AppBroker.BusinessCore.Entity.DTO;
 using AutoMapper;
+using BusinessCore.Entity.DTO;
 using BusinessCore.Interfaces;
 using Infrastructure.Data;
 using Infrastructure.Entity;
@@ -26,6 +27,19 @@ namespace BusinessCore.Services
             this.dbcontext = dbcontext;
             this.mapper = mapper;
         }
+        public async Task SubmitUser(UserSubmitDTO form)
+        {
+            var data = await dbcontext.AspNetUsers.Where(s=>s.Email == form.Email)
+                .FirstOrDefaultAsync();
+        }
+        public async Task<List<UserListDTO>> ListUser()
+        {
+            var data = await dbcontext.AspNetUsers.ToListAsync();
+            if (data.Count() == 0) return new List<UserListDTO>();
+            var response = mapper.Map<List<UserListDTO>>(data);
+            return response;
+        }
+
         public async Task<string> LoginAsync(SignInDTO form)
         {
             var data = await dbcontext.AspNetUsers.Where(s=>s.Email == form.Email).FirstOrDefaultAsync();

@@ -29,7 +29,7 @@ namespace AppBroker.Controllers
                 };
                 var claimIdentity = new ClaimsIdentity(claims);
                 this.HttpContext.User.AddIdentity(claimIdentity);
-                return View(); 
+                return Redirect("/User/UserManagement");
             }
             else
             {
@@ -52,6 +52,18 @@ namespace AppBroker.Controllers
             {
                 return View(form);
             }
+        }
+
+        public async Task<IActionResult> UserManagement()
+        {
+            var data = await userService.ListUser();
+            return View(data);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> UserManagement(UserSubmitDTO formSubmit)
+        {
+            return View(formSubmit);
         }
 
         public IActionResult Logout()

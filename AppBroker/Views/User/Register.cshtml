@@ -22,24 +22,28 @@
                     {
                         @Html.AntiForgeryToken()
                         <div class="form-floating mb-3">
-                            @Html.EditorFor(s=>s.FirstName,new {htmlAttributes = new {@autocomplete="off",@class="form-control",@type="text",@placeholder="name@example.com"} })
+                            @Html.EditorFor(s=>s.FirstName,new {htmlAttributes = new {@class="form-control",@type="text",@placeholder="name@example.com"} })
                             <label for="FirstName">First Name</label>
+                            @Html.ValidationMessageFor(s=>s.FirstName);
                         </div>
                         <div class="form-floating mb-3">
-                            @Html.EditorFor(s=>s.LastName,new {htmlAttributes = new {@autocomplete="off",@class="form-control",@type="text",@placeholder="name@example.com"} })
+                            @Html.EditorFor(s=>s.LastName,new {htmlAttributes = new {@class="form-control",@type="text",@placeholder="name@example.com"} })
                             <label for="LastName">Last Name</label>
+                            @Html.ValidationMessageFor(s=>s.LastName);
                         </div>
                         <div class="form-floating mb-3">
-                            @Html.EditorFor(s=>s.Email,new {htmlAttributes = new {@autocomplete="off",@class="form-control",@type="email",@placeholder="name@example.com"} })
+                            @Html.EditorFor(s=>s.Email,new {htmlAttributes = new {@class="form-control",@type="email",@placeholder="name@example.com"} })
                             <label for="Email">Email address</label>
                         </div>
                         <div class="form-floating mb-3">
-                            @Html.EditorFor(s=>s.Password,new {htmlAttributes = new {@autocomplete="off",@class="form-control",@type="password",@placeholder="******"} })
+                            @Html.EditorFor(s=>s.Password,new {htmlAttributes = new {@class="form-control",@type="password",@placeholder="******"} })
                             <label for="Password">Password</label>
+                            @Html.ValidationMessageFor(s=>s.Password);
                         </div>
                         <div class="form-floating mb-3">
-                            @Html.EditorFor(s=>s.RepeatPassword,new {htmlAttributes = new {@autocomplete="off",@class="form-control",@type="password",@placeholder="******"} })
+                            @Html.EditorFor(s=>s.RepeatPassword,new {htmlAttributes = new {@class="form-control",@type="password",@placeholder="******"} })
                             <label for="RepeatPassword">Repeat Password</label>
+                            @Html.ValidationMessageFor(s=>s.RepeatPassword);
                         </div>
                         <div class="text-center mb-3">
                             <button type="submit" value="submit" class="btn btn-primary" style="width:100%">Sign Up</button>

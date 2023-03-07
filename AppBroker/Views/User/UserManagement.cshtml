@@ -21,8 +21,8 @@
             // Add row on add button click
             $(document).on("click", ".add", function () {
                 var empty = false;
-                var input = $(this).parents("tr").find('input[type="text"]');
-                var inputEmail = $(this).parents("tr").find('input[type="email"]');
+                var input = $(this).parents("tr").filter('input[type="text"]' || 'input[type="email"]');
+                //var inputEmail = $(this).parents("tr").find('input[type="email"]');
                 
                 input.each(function () {
                     if (!$(this).val()) {

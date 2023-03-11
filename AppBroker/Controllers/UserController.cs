@@ -1,4 +1,5 @@
-﻿using AutoMapper;
+﻿using AppBroker.Interfaces;
+using AutoMapper;
 using BusinessCore.Interfaces;
 using Infrastructure;
 using Magicodes.ExporterAndImporter.Core;
@@ -12,8 +13,10 @@ namespace AppBroker.Controllers
     {
         private readonly IUserService userService;
         private readonly IMapper Mapper;
-        public UserController(IUserService userService, IMapper Mapper)
+        private readonly IHelperService helperService;
+        public UserController(IUserService userService, IMapper Mapper, IHelperService helperService)
         {
+            this.helperService = helperService;
             this.Mapper = Mapper;
             this.userService = userService;
         }
@@ -137,29 +140,9 @@ namespace AppBroker.Controllers
         [HttpPost("User/Import")]
         public async Task<IActionResult> Import()
         {
-            var files = HttpContext.Request.Form.Files; 
-            long size = files.Sum(f => f.Length);
-
-            foreach (var formFile in files)
-            {
-                if (formFile.Length > 0)
-                {
-                    var filePath = $"{Directory.GetCurrentDirectory()}/{formFile.FileName}";
-
-                    using (var stream = System.IO.File.Create(filePath))
-                    {
-                        await formFile.CopyToAsync(stream);
-                    }
-                }
-            }
-
+            var files = HttpContext.Request.Form.Files;
+            await this.helperService.UploadFile(files);
             return Redirect("/User/UserManagement");
         }
     }
-}
-public class CreatePost
-{
-    public string ImageCaption { set; get; }
-    public string ImageDescription { set; get; }
-    public IFormFile MyImage { set; get; }
 }

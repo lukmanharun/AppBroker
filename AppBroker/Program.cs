@@ -1,4 +1,6 @@
 using AppBroker.Entity;
+using AppBroker.Interfaces;
+using AppBroker.Services;
 using BusinessCore.Entity;
 using BusinessCore.Interfaces;
 using BusinessCore.Services;
@@ -6,7 +8,9 @@ using Infrastructure.Data;
 using Infrastructure.Interfaces;
 using Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using Serilog.Sinks.MSSqlServer;
@@ -67,7 +71,9 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddAutoMapper(typeof(MapperProfile));
 builder.Services.AddScoped<IHelper, Helper>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IHelperService, HelperService>();
 
+builder.Services.AddDirectoryBrowser();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -79,8 +85,25 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseStaticFiles();
 
+var folder = builder.Configuration.GetSection("FileManagement").GetSection("Folder").Value??"Resources";
+
+if (!Directory.Exists(Path.Combine(builder.Environment.ContentRootPath, folder)))
+{
+    Directory.CreateDirectory(Path.Combine(builder.Environment.ContentRootPath, folder));
+}
+var fileProvider = new PhysicalFileProvider(Path.Combine(builder.Environment.ContentRootPath, folder));
+var folderRoot = $"/{folder}";
+app.UseStaticFiles( new StaticFileOptions
+{
+    FileProvider = fileProvider,
+    RequestPath = folderRoot,
+});
+app.UseDirectoryBrowser(new DirectoryBrowserOptions
+{
+    FileProvider = fileProvider,
+    RequestPath = folderRoot,
+});
 app.UseRouting();
 
 app.UseAuthentication();

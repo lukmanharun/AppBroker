@@ -1,99 +1,122 @@
-﻿@model List<BusinessCore.Entity.DTO.UserListDTO>;
-@section Scripts{
+﻿@section scripts
+    {
+    <script src="https://code.jquery.com/jquery-3.5.1.js"></script>
+    <script src="https://cdn.datatables.net/1.13.3/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.3/js/dataTables.bootstrap5.min.js"></script>
     <script>
-        $(document).ready(function () {
-            $('[data-toggle="tooltip"]').tooltip();
-            var actions = $("table td:last-child").html();
-            // Append table with add row form on add new button click
-            $(".add-new").click(function () {
-                $(this).attr("disabled", "disabled");
-                var index = $("table tbody tr:last-child").index();
-                var row = '<tr>' +
-                    '<td><input type="text" class="form-control" name="FirstName" id="FirstName"></td>' +
-                    '<td><input type="text" class="form-control" name="LastName" id="LastName"></td>' +
-                    '<td><input type="email" class="form-control" name="Email" id="Email"></td>' +
-                    '<td>' + actions + '</td>' +
-                    '</tr>';
-                $("table").append(row);
-                $("table tbody tr").eq(index + 1).find(".add, .edit").toggle();
-                $('[data-toggle="tooltip"]').tooltip();
-            });
-            // Add row on add button click
-            $(document).on("click", ".add", function () {
-                var empty = false;
-                var input = $(this).parents("tr").filter('input[type="text"]' || 'input[type="email"]');
-                //var inputEmail = $(this).parents("tr").find('input[type="email"]');
-                
-                input.each(function () {
-                    if (!$(this).val()) {
-                        $(this).addClass("error");
-                        empty = true;
-                    } else {
-                        $(this).removeClass("error");
+        $('#gridusermanagement').DataTable({
+            ajax: {
+                url: '/User/GetGridUser',
+                dataSrc: 'data',
+                type: 'post',
+            },
+            processing: true,
+            serverSide: true,
+            search: {
+                return: true,
+            },
+            "columnDefs": [{
+                "targets": [0],
+                "visible": false
+            }],
+            columns: [
+                { data: 'userId' },
+                { data: 'firstName' },
+                { data: 'lastName' },
+                { data: 'email' },
+                {
+                    //adds td row for button
+                    data: null,
+                    render: function (data, type, row) {
+                        return '<td>'
+                            + '<a class="edit btn-sm" href="/User/EditUser/' + data.userId + '" title="edit"><i class="material-icons">edit</i> </a>'
+                            + '<a class="delete btn-sm" onclick=DeleteData("' + data.userId + '"); href="#" title="delete"><i class="material-icons">delete</i> </a>'
+                            + '</td>';
+                    },
+                    orderable: false,
+                    searching: false
+                }
+            ]
+        });
+        function DeleteData(userId) {
+            if (confirm("Are you sure you want to delete ...?")) {
+
+                var url = '@Url.Content("~/")' + "User/Delete";
+                $.post(url, { Id: userId}, function (data) {
+                    if (data == true) {
+                        //alert("Delete Customer !");
+                        oTable = $('#gridusermanagement').DataTable();
+                        oTable.draw();
+                    }
+                    else {
+                        alert("Something Went Wrong!");
                     }
                 });
-                $(this).parents("tr").find(".error").first().focus();
-                if (!empty) {
-                    input.each(function () {
-                        $(this).parent("td").html($(this).val());
-                    });
-                    $(this).parents("tr").find(".add, .edit").toggle();
-                    $(".add-new").removeAttr("disabled");
-                }
-            });
-            // Edit row on edit button click
-            $(document).on("click", ".edit", function () {
-                $(this).parents("tr").find("td:not(:last-child)").each(function () {
-                    //Except Email type
-                    if (this.cellIndex != 2)
-                        $(this).html('<input type="text" class="form-control" value="' + $(this).text() + '">');
-                    else
-                        $(this).html('<input type="email" class="form-control" value="' + $(this).text() + '">');
-                });
-                $(this).parents("tr").find(".add, .edit").toggle();
-                $(".add-new").attr("disabled", "disabled");
-            });
-            // Delete row on delete button click
-            $(document).on("click", ".delete", function () {
-                $(this).parents("tr").remove();
-                $(".add-new").removeAttr("disabled");
-            });
-        });
+            }
+            else {
+                return false;
+            }
+        }
+
     </script>
 }
-@{
-
-}
-<table class="table table-hover">
-    <div class="table-title">
+<div class="card">
+    <div class="card-header">
         <div class="row">
-            <div class="col-sm-8"><h2>User <b>Management</b></h2></div>
-            <div class="col-sm-4">
-                <button type="button" class="btn btn-info add-new"><i class="fa fa-plus"></i> Add New</button>
+            <div class="col">
+                <h4>User <b>Management</b></h4>
+            </div>
+            <div class="col">
+                <a class="btn btn-primary btn-lg float-end btn-sm m-1" href="/User/AddNewUser">Add New Data</a>
+                @using (Html.BeginForm("Export", "User", HttpMethod.Post))
+                {
+                    <button type="submit" value="submit" class="btn btn-primary btn-sm float-end btn-sm m-1">Export</button>
+                }
+                <button type="button" class="btn btn-primary btn-sm float-end btn-sm m-1" data-bs-toggle="modal" data-bs-target="#shoUploadModal">
+                    Import
+                </button>
+            </div>
+
+        </div>
+    </div>
+    <div class="card-body">
+        <table id="gridusermanagement" class="table table-striped" style="width:100%" cellspacing="0">
+            <thead>
+                <tr>
+                    <th>User ID</th>
+                    <th>First Name</th>
+                    <th>Last Name</th>
+                    <th>Email</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+        </table>
+    </div>
+    
+    <div class="modal fade" id="shoUploadModal" tabindex="-1" aria-labelledby="modalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalLabel">File Upload</h5>
+                    <button type="button" class="btn-close btn-sm" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                @using (Html.BeginForm("Import", "User", FormMethod.Post, new { enctype = "multipart/form-data" }))
+                {
+                    <div class="modal-body">
+
+                        <div class="modal-body">
+                            <div class="input-group mb-3">
+                                <input type="file" class="form-control" name="file">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                        <button type="submit" value="submit" class="btn btn-primary btn-sm" data-bs-dismiss="modal">Upload</button>
+                    </div>
+                }
             </div>
         </div>
     </div>
-    <thead>
-        <tr>
-            <th scope="col">First Name</th>
-            <th scope="col">Last Name</th>
-            <th scope="col">Email</th>
-            <th scope="col">Action</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var item in Model)
-        {
-            <tr>
-                <td>@item.FirstName</td>
-                <td>@item.LastName</td>
-                <td>@item.Email</td>
-                <td>
-                    <a class="add" title="Add" data-toggle="tooltip"><i class="material-icons">save</i></a>
-                    <a class="edit" title="Edit" data-toggle="tooltip"><i class="material-icons">edit</i></a>
-                    <a class="delete" title="Delete" data-toggle="tooltip"><i class="material-icons">delete</i></a>
-                </td>
-            </tr>
-        }
-    </tbody>
-</table>
+</div>

@@ -1,4 +1,4 @@
-﻿@model AppBroker.BusinessCore.Entity.DTO.SignInDTO;
+﻿@model Infrastructure.SignInDTO;
 @{
     Layout = null;
 }
@@ -23,12 +23,12 @@
                         <div class="form-floating mb-3">
                             @Html.EditorFor(s=>s.Email,new {htmlAttributes = new {@autocomplete=false,@class="form-control",@type="email",@placeholder="name@example.com"} })
                             <label for="Email">Email address</label>
-                            @Html.ValidationMessageFor(s=>s.Email);
+                            @Html.ValidationMessageFor(s=>s.Email)
                         </div>
                         <div class="form-floating mb-3">
                             @Html.EditorFor(s=>s.Password,new {htmlAttributes = new {@autocomplete=false,@class="form-control",@type="password",@placeholder="******"} })
                             <label for="Password">Password</label>
-                            @Html.ValidationMessageFor(s=>s.Password);
+                            @Html.ValidationMessageFor(s=>s.Password)
                         </div>
                         <div class="text-center mb-3">
                             <button type="submit" value="submit" class="btn btn-primary" style="width:100%">Sign in</button>

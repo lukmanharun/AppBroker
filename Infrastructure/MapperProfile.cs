@@ -1,12 +1,6 @@
-﻿using AppBroker.BusinessCore.Entity.DTO;
-using AutoMapper;
-using BusinessCore.Entity.DTO;
+﻿using AutoMapper;
+using Infrastructure;
 using Infrastructure.Entity;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace BusinessCore.Entity
 {
@@ -18,6 +12,8 @@ namespace BusinessCore.Entity
             CreateMap<AspNetUser, RegisterDTO>().ReverseMap();
             CreateMap<AspNetUser, UserListDTO>().ReverseMap();
             CreateMap<AspNetUser, UserSubmitDTO>().ReverseMap();
+            CreateMap<AspNetUser, UserEditSubmitDTO>().ReverseMap();
+            CreateMap<AspNetUser, UserExportDto>().ReverseMap();
             #endregion
         }
     }

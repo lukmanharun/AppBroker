@@ -1,12 +1,12 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace AppBroker.BusinessCore.Entity.DTO
+namespace Infrastructure
 {
     public class SignInDTO
     {
         [Required(AllowEmptyStrings = false)]
-        public string Email { get; set; }
+        public required string Email { get; set; }
         [Required(AllowEmptyStrings = false)]
-        public string Password { get; set; }
+        public required string Password { get; set; }
     }
 }

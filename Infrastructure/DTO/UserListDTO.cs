@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BusinessCore.Entity.DTO
+namespace Infrastructure
 {
     public class UserListDTO
     {

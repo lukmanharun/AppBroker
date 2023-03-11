@@ -1,0 +1,27 @@
+﻿@model Infrastructure.UserEditSubmitDTO;
+@{
+}
+
+@using (Html.BeginForm("EditUser", "User", HttpMethod.Post))
+{
+    @Html.AntiForgeryToken()
+    <div class="form-floating mb-3">
+        @Html.EditorFor(s=>s.FirstName,new {htmlAttributes = new {@class="form-control",@type="text",@placeholder="name@example.com"} })
+        <label for="FirstName">First Name</label>
+        @Html.ValidationMessageFor(s=>s.FirstName)
+    </div>
+    <div class="form-floating mb-3">
+        @Html.EditorFor(s=>s.LastName,new {htmlAttributes = new {@class="form-control",@type="text",@placeholder="name@example.com"} })
+        <label for="LastName">Last Name</label>
+        @Html.ValidationMessageFor(s=>s.LastName)
+    </div>
+    <div class="form-floating mb-3">
+        @Html.EditorFor(s=>s.Email,new {htmlAttributes = new {@class="form-control",@type="email",@placeholder="name@example.com"} })
+        <label for="Email">Email address</label>
+        @Html.ValidationMessageFor(s=>s.Email)
+    </div>
+    <input type="hidden" id="UserId" name="UserId" value=@Model.UserId>
+    <div class="text-center mb-3">
+        <button type="submit" value="submit" class="btn btn-primary" style="width:100%">Submit</button>
+    </div>
+}

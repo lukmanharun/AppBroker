@@ -33,6 +33,7 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.CreatedBy).HasMaxLength(50);
             entity.Property(e => e.Email).HasMaxLength(50);
             entity.Property(e => e.FirstName).HasMaxLength(50);
+            entity.Property(e => e.LastChanged).HasColumnType("datetime");
             entity.Property(e => e.LastName).HasMaxLength(50);
             entity.Property(e => e.ModifiedAt).HasColumnType("datetime");
             entity.Property(e => e.ModifiedBy).HasMaxLength(50);

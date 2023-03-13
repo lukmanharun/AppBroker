@@ -8,12 +8,13 @@ namespace BusinessCore.Entity
     {
         public MapperProfile()
         {
-            #region User
+            #region AspNetUser
             CreateMap<AspNetUser, RegisterDTO>().ReverseMap();
             CreateMap<AspNetUser, UserListDTO>().ReverseMap();
             CreateMap<AspNetUser, UserSubmitDTO>().ReverseMap();
             CreateMap<AspNetUser, UserEditSubmitDTO>().ReverseMap();
             CreateMap<AspNetUser, UserExportDto>().ReverseMap();
+            CreateMap<AspNetUser, UserimportDto>().ReverseMap();
             #endregion
         }
     }

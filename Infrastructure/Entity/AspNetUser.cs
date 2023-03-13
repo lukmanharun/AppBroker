@@ -24,4 +24,6 @@ public partial class AspNetUser
     public DateTime? ModifiedAt { get; set; }
 
     public string? ModifiedBy { get; set; }
+
+    public DateTime? LastChanged { get; set; }
 }

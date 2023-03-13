@@ -19,14 +19,14 @@ namespace AppBroker.Services
             {
                 if (formFile.Length > 0)
                 {
-                    var filePath = $"{Directory.GetCurrentDirectory()}/{folder}/{formFile.FileName}";
-                    using (var stream = System.IO.File.Create(filePath))
+                    var id = Guid.NewGuid().ToString();
+                    var filePath = $"{Directory.GetCurrentDirectory()}/{folder}/{id}_{formFile.FileName}";
+                    using (var stream = File.Create(filePath))
                     {
                         await formFile.CopyToAsync(stream);
                     }
                 }
             }
-
         }
     }
 }

@@ -5,13 +5,12 @@ using Infrastructure.Data;
 using Infrastructure.Entity;
 using Infrastructure.Interfaces;
 using Infrastructure.Services;
+using Magicodes.ExporterAndImporter.Core.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion.Internal;
 using Microsoft.Extensions.Configuration;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
+using System.Data.Common;
 
 namespace BusinessCore.Services
 {
@@ -43,6 +42,40 @@ namespace BusinessCore.Services
             return response;
         }
 
+        public async Task<List<DataRowErrorInfo>> ImportUser(List<UserimportDto> data,string userid)
+        {
+            var emails = data.Select(s => s.Email);
+            List<DataRowErrorInfo> dataerrors = new List<DataRowErrorInfo>();
+            var emailExist = await dbcontext.AspNetUsers.Where(s => emails.Contains(s.Email)).AsNoTracking().ToListAsync();
+            if(emailExist.Count()>0)
+            {
+                foreach (var item in emailExist)
+                {
+                    dataerrors.Add(new DataRowErrorInfo()
+                    {
+                        RowIndex = data.IndexOf(data.Where(s => s.Email == item.Email).First()),
+                        FieldErrors = new Dictionary<string, string>
+                        {
+                            {
+                                "Email","Email is Exist"
+                            }
+                        }
+                    });
+                }
+            }
+            IEnumerable<UserimportDto> inData = data.Where(s => !emailExist.Any(d => d.Email == s.Email) && s.Errors == null);
+            var dataImport = mapper.Map<List<AspNetUser>>(inData);
+            dataImport.ForEach(s =>
+            {
+                s.CreatedAt = DateTime.Now;
+                s.CreatedBy = userid;
+                s.PasswordHash = helper.GenerateHash(s.PasswordHash);
+                s.UserId = Guid.NewGuid().ToString();
+            });
+            await dbcontext.AspNetUsers.AddRangeAsync(dataImport);
+            await dbcontext.SaveChangesAsync();
+            return dataerrors;
+        }
         public async Task<List<AspNetUser>> ExportUserManagement()
         {
             return await dbcontext.AspNetUsers.AsNoTracking().ToListAsync();
@@ -87,42 +120,6 @@ namespace BusinessCore.Services
             await dbcontext.AspNetUsers.AddAsync(data);
             await dbcontext.SaveChangesAsync();
         }
-        public async Task<string> LoginAsync(SignInDTO form)
-        {
-            var data = await dbcontext.AspNetUsers.Where(s=>s.Email == form.Email).FirstOrDefaultAsync();
-            if(data == null)
-            {
-                throw new Exception("User not found");
-            }
-            if(data.PasswordHash != helper.GenerateHash(form.Password))
-            {
-                throw new Exception("Password not match");
-            }
-            var issuer = configuration.GetSection("JwtSetting").GetSection("IsUser").Value??"AppBroker";
-            var audience = configuration.GetSection("JwtSetting").GetSection("Audience").Value ?? "AppBroker";
-            var secretKey = configuration.GetSection("JwtSetting").GetSection("SecretKey").Value ?? "AppBroker";
-            var key = Encoding.ASCII.GetBytes(secretKey);
-            var tokenDescriptor = new SecurityTokenDescriptor
-            {
-                Subject = new ClaimsIdentity(new[]
-                {
-                    new Claim("Id", Guid.NewGuid().ToString()),
-                    new Claim(JwtRegisteredClaimNames.Sub, data.Email),
-                    new Claim(JwtRegisteredClaimNames.Email, data.Email),
-                    new Claim(JwtRegisteredClaimNames.Jti,Guid.NewGuid().ToString())
-                }),
-                Expires = DateTime.UtcNow.AddMinutes(30),
-                Issuer = issuer,
-                Audience = audience,
-                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key),SecurityAlgorithms.HmacSha512Signature)
-            };
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var token = tokenHandler.CreateToken(tokenDescriptor);
-            var jwtToken = tokenHandler.WriteToken(token);
-            var stringToken = tokenHandler.WriteToken(token);
-            return stringToken;
-        }
-
         public async Task RegisterAsync(RegisterDTO form)
         {
             var data = mapper.Map<AspNetUser>(form);
@@ -137,6 +134,31 @@ namespace BusinessCore.Services
             data.PasswordHash = helper.GenerateHash(form.Password);
             await dbcontext.AspNetUsers.AddAsync(data);
             await dbcontext.SaveChangesAsync();
+        }
+        public async Task<(bool success,AspNetUser data,Dictionary<string, string> errors)> Authentication(SignInDTO form)
+        {
+            form.Password = helper.GenerateHash(form.Password);
+            var data = await dbcontext.AspNetUsers.Where(s => s.Email == form.Email )
+                .FirstOrDefaultAsync();
+            if (data == null)
+            {
+                return (false,new AspNetUser(), new Dictionary<string, string>
+                {
+                    {
+                        "Email","Email dosent exist"
+                    }
+                });
+            }
+            if(data.PasswordHash != form.Password)
+            {
+                return (false, new AspNetUser(), new Dictionary<string, string>
+                {
+                    {
+                        "Password","Invalid password"
+                    }
+                });
+            }
+            return (true,data, new Dictionary<string, string>());
         }
 
     }

@@ -8,5 +8,6 @@ namespace Infrastructure
         public required string Email { get; set; }
         [Required(AllowEmptyStrings = false)]
         public required string Password { get; set; }
+        public required bool IsRememberme { get; set; }
     }
 }

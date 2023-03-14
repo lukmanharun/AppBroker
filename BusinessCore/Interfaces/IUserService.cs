@@ -13,7 +13,7 @@ namespace BusinessCore.Interfaces
         Task EditUser(UserEditSubmitDTO form, string userid);
         Task<List<AspNetUser>> ExportUserManagement();
         Task<AspNetUser> GetUserByUserId(string UserId);
-        Task<List<UserListDTO>> GridListUserQueryrable(IFormCollection form);
+        Task<GridDataTable<UserListDTO>> GridListUserQueryrable(IFormCollection form);
         Task<List<UserimportDto>> ImportUser(List<UserimportDto> data, string userid);
         Task RegisterAsync(RegisterDTO form);
     }

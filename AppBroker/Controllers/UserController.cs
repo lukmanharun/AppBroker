@@ -10,12 +10,10 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
-using System.IO;
 using Magicodes.ExporterAndImporter.Core.Models;
-using SkiaSharp;
-using AppBroker.Services.Magicode;
-using OfficeOpenXml;
+using RabbitMQ.Client;
+using Infrastructure.Interfaces;
+using System.Text;
 using Newtonsoft.Json;
 
 namespace AppBroker.Controllers
@@ -26,15 +24,16 @@ namespace AppBroker.Controllers
         private readonly IUserService userService;
         private readonly IMapper Mapper;
         private readonly IHelperService helperService;
-        private readonly ILogger<UserController> logger;    
+        private readonly ILogger<UserController> logger;
+        private readonly IRabbitMQService rabbitMQService;
         public UserController(IUserService userService, IMapper Mapper, IHelperService helperService
-            , ILogger<UserController> logger)
+            ,ILogger<UserController> logger, IRabbitMQService rabbitMQService)
         {
+            this.rabbitMQService = rabbitMQService;
             this.helperService = helperService;
             this.Mapper = Mapper;
             this.userService = userService;
             this.logger = logger;
-
         }
         [AllowAnonymous]
         public IActionResult SignIn(string? returnUrl)
@@ -58,6 +57,7 @@ namespace AppBroker.Controllers
                 }
                 var claims = new List<Claim>
                 {
+                    new Claim(ClaimTypes.Sid, r.data.UserId),
                     new Claim(ClaimTypes.Name,r.data.Email),
                     new Claim(ClaimTypes.Surname,r.data.LastName),
                     new Claim(ClaimTypes.Version,r.data.LastChanged?.ToString()??"")
@@ -71,6 +71,10 @@ namespace AppBroker.Controllers
                 await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme,
                     new ClaimsPrincipal(claimsIdentity)
                     , authProperties);
+                using var connection = this.rabbitMQService.CreateChannel();
+                using var model = connection.CreateModel();
+                var body = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(r.data));
+                model.BasicPublish("UserLoginExchange",string.Empty,basicProperties:null,body:body);
                 return Redirect("/User/UserManagement");
             }
             else
@@ -102,7 +106,6 @@ namespace AppBroker.Controllers
                 return View(form);
             }
         }
-
         public IActionResult UserManagement()
         {
             return View();
@@ -113,14 +116,7 @@ namespace AppBroker.Controllers
         {
             var form = HttpContext.Request.Form;
             var data = await userService.GridListUserQueryrable(form);
-            var response = new GridDataTable<List<UserListDTO>>()
-            {
-                data = data,
-                draw = Convert.ToInt16(form["draw"].FirstOrDefault() ?? "0"),
-                recordsFiltered = data.Count(),
-                recordsTotal = data.Count()
-            };
-            return new JsonResult(response);
+            return new JsonResult(data);
         }
         public IActionResult AddNewUser()
         {

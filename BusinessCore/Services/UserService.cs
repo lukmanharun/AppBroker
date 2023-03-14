@@ -5,12 +5,9 @@ using Infrastructure.Data;
 using Infrastructure.Entity;
 using Infrastructure.Interfaces;
 using Infrastructure.Services;
-using Magicodes.ExporterAndImporter.Core.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Storage.ValueConversion.Internal;
 using Microsoft.Extensions.Configuration;
-using System.Data.Common;
 
 namespace BusinessCore.Services
 {
@@ -27,11 +24,16 @@ namespace BusinessCore.Services
             this.dbcontext = dbcontext;
             this.mapper = mapper;
         }
-        public async Task<List<UserListDTO>> GridListUserQueryrable(IFormCollection form)
+        public async Task<GridDataTable<UserListDTO>> GridListUserQueryrable(IFormCollection form)
         {
-            var data = await dbcontext.AspNetUsers.DataTableGridAsQueryrable<AspNetUser>(form).AsNoTracking().ToListAsync();
-            var result = mapper.Map<List<UserListDTO>>(data);
-            return result;
+            return await dbcontext.AspNetUsers.Select(s => new UserListDTO
+            {
+                FirstName = s.FirstName,
+                LastName = s.LastName,
+                Email = s.Email,
+                UserId = s.UserId
+            }).AsNoTracking().DataTableGrid<UserListDTO>(form);
+            
         }
         public async Task<AspNetUser> GetUserByUserId(string UserId)
         {

@@ -9,12 +9,45 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using System.Runtime.CompilerServices;
+using OfficeOpenXml.FormulaParsing.Excel.Functions.RefAndLookup;
 
 namespace Infrastructure.Services
 {
     public static class DataGridQueryrable
     {
         #region Data Grid
+
+        public static async Task<GridDataTable<T>> DataTableGrid<T>(this IQueryable<T> Queryrable, IFormCollection form) where T : class
+        {
+
+            var searchValue = form["search[value]"].FirstOrDefault() ?? "".ToLower();
+            var sortDirection = form["order[0][dir]"].FirstOrDefault() ?? "asc";
+            var indexSort = form["order[0][column]"].FirstOrDefault() ?? "0";
+            var colSorting = form[$"columns[{indexSort}][data]"].FirstOrDefault();
+            var Field = typeof(T).GetProperties().Select(s => s.Name).ToList();
+            var start = form["start"].FirstOrDefault() ?? "0";
+            var length = form["length"].FirstOrDefault() ?? "5";
+            var take = Convert.ToInt32(length);
+            var skip = Convert.ToInt32(start);
+
+            Queryrable = Queryrable.SearchGrid<T>(searchValue, Field);
+            IQueryable<T> queryOri = Queryrable;
+            var rowCount = await queryOri.CountAsync();
+
+            bool isDesc = (sortDirection is null ? "" : sortDirection.ToLower()) == "desc" ? true : false;
+            Queryrable = Queryrable.OrderByProperty<T>(colSorting, isDesc);
+
+            Queryrable = Queryrable.Skip(skip).Take(take);
+            var data = await Queryrable.ToListAsync();
+
+            return new GridDataTable<T>
+            {
+                draw = Convert.ToInt16(form["draw"].FirstOrDefault() ?? "1"),
+                recordsTotal = data.Count(),
+                recordsFiltered = rowCount,
+                data = data
+            };
+        }
         /// <summary>
         /// Data for grid data table
         /// </summary>
@@ -44,7 +77,8 @@ namespace Infrastructure.Services
             QueryrableResult = QueryrableResult.SearchGrid<T>(searchValue, Field);
             bool isDesc = (sortDirection is null ? "" : sortDirection.ToLower()) == "desc" ? true : false;
             QueryrableResult = QueryrableResult.OrderByProperty<T>(colSorting, isDesc);
-            QueryrableResult = QueryrableResult.Take(take).Skip(skip);
+
+            QueryrableResult = QueryrableResult.Skip(skip).Take(take);
             return QueryrableResult;
         }
 

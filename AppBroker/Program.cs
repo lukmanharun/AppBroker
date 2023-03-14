@@ -4,6 +4,7 @@ using BusinessCore.Entity;
 using BusinessCore.Interfaces;
 using BusinessCore.Services;
 using Infrastructure.Data;
+using Infrastructure.DTO;
 using Infrastructure.Interfaces;
 using Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -61,9 +62,13 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
             options.AccessDeniedPath = new PathString("/User/Forbidden");
             options.LoginPath = new PathString("/User/SignIn");
             options.LogoutPath = new PathString("/User/Logout");
-
         });
 builder.Services.AddHttpContextAccessor();
+//Message broker DI
+builder.Services.Configure<RabbitMQConfiguration>(opt =>builder.Configuration.GetSection(nameof(RabbitMQConfiguration)).Bind(opt));
+builder.Services.AddSingleton<IRabbitMQService, RabbitMQService>();
+builder.Services.AddSingleton<IMessageBrokerService, MessageBrokerService>();
+builder.Services.AddHostedService<ConsumerHostedService>();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

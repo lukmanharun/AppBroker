@@ -15,6 +15,7 @@ namespace BusinessCore.Entity
             CreateMap<AspNetUser, UserEditSubmitDTO>().ReverseMap();
             CreateMap<AspNetUser, UserExportDto>().ReverseMap();
             CreateMap<AspNetUser, UserimportDto>().ReverseMap();
+            CreateMap<AspNetUser, UserimportTemplateDto>().ReverseMap();
             #endregion
         }
     }

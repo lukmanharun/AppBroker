@@ -174,24 +174,27 @@ namespace AppBroker.Controllers
         public async Task<IActionResult> Export()
         {
             var data = await userService.ExportUserManagement();
-            var exportData = Mapper.Map<List<UserimportTemplateDto>>(data);
+            var exportData = Mapper.Map<List<UserExportDto>>(data);
             IExporter exporter = new ExcelExporter();
             var fileContent = await exporter.ExportAsByteArray(exportData);
-            return File(fileContent, System.Net.Mime.MediaTypeNames.Application.Octet, "UserManegement.xlsx");
+            return File(fileContent, System.Net.Mime.MediaTypeNames.Application.Octet, "UserManegementExport.xlsx");
         }
         [HttpPost("User/Import")]
         public async Task<IActionResult> Import()
         {
+            IFormCollection formCollect = HttpContext.Request.Form;
             IFormFileCollection files = HttpContext.Request.Form.Files;
+            bool IsFeedback = (formCollect["feedbackimport"].FirstOrDefault() ?? "off") == "on"?true:false;
             if(files.Count() == 0 || files.FirstOrDefault()?.Length == 0)
             {
-                return View();
+                return Redirect("/User/UserManagement");
             }
             using (MemoryStream stream = new MemoryStream())
             {
                 files[0].CopyTo(stream);
                 IExcelImporter Importer = new ExcelImporter();
                 var data = await Importer.Import<UserimportDto>(stream);
+                if (data.Data is null) throw new Exception("Invalid template import user management");
                 IList<DataRowErrorInfo> rowErros = data.RowErrors;
                 List<UserimportDto> importData = data.Data.Cast<UserimportDto>().ToList();
                 foreach (var item in rowErros)
@@ -201,20 +204,11 @@ namespace AppBroker.Controllers
                     importData[item.RowIndex - 2].Errors = string.Join("|", fieldErrors);
                 }
                 var result = await userService.ImportUser(importData,HttpContext.User.Claims.Where(s=>s.Type == ClaimTypes.Name).First().Value);
-                if(result.Count()>0)
-                {
-                    foreach (var item in result)
-                    {
-                        var fieldErrors = item.FieldErrors.Select(s => s.Value);
-                        //Has index header
-                        importData[item.RowIndex - 2].Errors = $"{importData[item.RowIndex - 2].Errors}|{fieldErrors.First()}";
-                    }
-                }
-                if (rowErros.Any())
+                if (IsFeedback && result.Where(s=>s.Errors!=null).Count()>0)
                 {
                     IExcelExporter exporter = new ExcelExporter();
-                    var fileContent = await exporter.ExportAsByteArray(importData);
-                    return File(fileContent, System.Net.Mime.MediaTypeNames.Application.Octet, "User_Maagement.xlsx");
+                    var fileContent = await exporter.ExportAsByteArray(result);
+                    return File(fileContent, System.Net.Mime.MediaTypeNames.Application.Octet, "User_Maagement_import.xlsx");
                 }
             }
             return View(nameof(UserManagement));
@@ -225,7 +219,7 @@ namespace AppBroker.Controllers
             var exportData = new List<UserimportTemplateDto>();
             IExporter exporter = new ExcelExporter();
             var fileContent = await exporter.ExportAsByteArray(exportData);
-            return File(fileContent, System.Net.Mime.MediaTypeNames.Application.Octet, "Template_User_Maagement.xlsx");
+            return File(fileContent, System.Net.Mime.MediaTypeNames.Application.Octet, "Template_User_Maagement_import.xlsx");
         }
     }
 }

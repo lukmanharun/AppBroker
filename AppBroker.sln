@@ -11,6 +11,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Infrastructure", "Infrastru
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Read Me", "Read Me", "{7E63D3DC-7625-45DF-9B44-6A29610DD4FF}"
 	ProjectSection(SolutionItems) = preProject
+		init.sql = init.sql
 		readme.md = readme.md
 	EndProjectSection
 EndProject

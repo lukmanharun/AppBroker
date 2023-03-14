@@ -23,7 +23,7 @@ namespace Infrastructure
 
         public string Email { get; set; } = null!;
     }
-    [ExcelExporter(Name = "UserManagement")]
+    [ExcelExporter(Name = "UserManagementImport")]
     public class UserimportTemplateDto
     {
         [ExporterHeader(DisplayName = "FirstName")]
@@ -57,6 +57,7 @@ namespace Infrastructure
         [MinLength(8, ErrorMessage = "Password minimal 8 chacrater")]
         public string PasswordHash { get; set; } = null!;
         [ExporterHeader(DisplayName = "Errors")]
+        [ImporterHeader(Name = "Errors",IsIgnore =true)]
         public string Errors { get; set; } = null;
     }
 }

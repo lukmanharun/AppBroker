@@ -42,25 +42,16 @@ namespace BusinessCore.Services
             return response;
         }
 
-        public async Task<List<DataRowErrorInfo>> ImportUser(List<UserimportDto> data,string userid)
+        public async Task<List<UserimportDto>> ImportUser(List<UserimportDto> data,string userid)
         {
             var emails = data.Select(s => s.Email);
-            List<DataRowErrorInfo> dataerrors = new List<DataRowErrorInfo>();
             var emailExist = await dbcontext.AspNetUsers.Where(s => emails.Contains(s.Email)).AsNoTracking().ToListAsync();
             if(emailExist.Count()>0)
             {
                 foreach (var item in emailExist)
                 {
-                    dataerrors.Add(new DataRowErrorInfo()
-                    {
-                        RowIndex = data.IndexOf(data.Where(s => s.Email == item.Email).First()),
-                        FieldErrors = new Dictionary<string, string>
-                        {
-                            {
-                                "Email","Email is Exist"
-                            }
-                        }
-                    });
+                    int index = data.IndexOf(data.Where(s => s.Email == item.Email).First());
+                    data[index].Errors = $"{data[index].Errors}|Email is exist";
                 }
             }
             IEnumerable<UserimportDto> inData = data.Where(s => !emailExist.Any(d => d.Email == s.Email) && s.Errors == null);
@@ -74,11 +65,16 @@ namespace BusinessCore.Services
             });
             await dbcontext.AspNetUsers.AddRangeAsync(dataImport);
             await dbcontext.SaveChangesAsync();
-            return dataerrors;
+            return data;
         }
         public async Task<List<AspNetUser>> ExportUserManagement()
         {
-            return await dbcontext.AspNetUsers.AsNoTracking().ToListAsync();
+            return await dbcontext.AspNetUsers.Select(s=> new AspNetUser
+            {
+                FirstName = s.FirstName,
+                LastName = s.LastName,
+                Email = s.Email,
+            }).AsNoTracking().ToListAsync();
         }
         public async Task DeleteUser(string userid)
         {

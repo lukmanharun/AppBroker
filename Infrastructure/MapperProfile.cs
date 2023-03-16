@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using AutoMapper.Internal;
 using Infrastructure;
 using Infrastructure.Entity;
 
@@ -9,8 +10,8 @@ namespace BusinessCore.Entity
         public MapperProfile()
         {
             #region AspNetUser
-            CreateMap<AspNetUser, RegisterDTO>().ReverseMap();
             CreateMap<AspNetUser, UserListDTO>().ReverseMap();
+            CreateMap<AspNetUser, RegisterDTO>().ReverseMap();
             CreateMap<AspNetUser, UserSubmitDTO>().ReverseMap();
             CreateMap<AspNetUser, UserEditSubmitDTO>().ReverseMap();
             CreateMap<AspNetUser, UserExportDto>().ReverseMap();

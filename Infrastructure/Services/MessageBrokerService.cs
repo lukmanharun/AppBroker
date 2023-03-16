@@ -13,7 +13,7 @@ using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace Infrastructure.Services
 {
-    public class MessageBrokerService : IMessageBrokerService
+    public sealed class MessageBrokerService : IMessageBrokerService
     {
         private readonly IModel model;
         private readonly IConnection connection;
@@ -23,7 +23,7 @@ namespace Infrastructure.Services
         {
             this.connection = rabbitMQService.CreateChannel();
             this.model = connection.CreateModel();
-            model.QueueDeclare(queueName);
+            model.QueueDeclare(queueName,exclusive:false,autoDelete:false);
             //Durable: true: stored on disk false stored on memory,
             //autoDelete is true, the queue is cleared when all Consumers are disconnected from RabbitMq.
             //But if it is true, the queue remains, Even if no Consumer is connected to it.

@@ -24,16 +24,26 @@ namespace BusinessCore.Services
             this.dbcontext = dbcontext;
             this.mapper = mapper;
         }
+
         public async Task<GridDataTable<UserListDTO>> GridListUserQueryrable(IFormCollection form)
         {
+            var r = await dbcontext.AspNetUsers.ToListAsync();
+            var dto = mapper.Map<List<UserListDTO>>(r);
+
+
             return await dbcontext.AspNetUsers.Select(s => new UserListDTO
             {
                 FirstName = s.FirstName,
                 LastName = s.LastName,
                 Email = s.Email,
-                UserId = s.UserId
-            }).AsNoTracking().DataTableGrid<UserListDTO>(form);
-            
+                UserId = s.UserId,
+                CreatedAt = s.CreatedAt,
+                CreatedAtFormat = s.CreatedAt.Format(),
+            }).AsNoTracking().DataTableGridServerSide<UserListDTO>(form, IgnorePropertySearch: "UserId"
+            ,TransformProperty:new Dictionary<string, string>
+            {
+                {"CreatedAtFormat","CreatedAt"}
+            });
         }
         public async Task<AspNetUser> GetUserByUserId(string UserId)
         {

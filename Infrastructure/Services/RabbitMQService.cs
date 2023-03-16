@@ -7,7 +7,7 @@ using SixLabors.ImageSharp;
 
 namespace Infrastructure.Services
 {
-    public class RabbitMQService : IRabbitMQService
+    public sealed class RabbitMQService : IRabbitMQService
     {
         private readonly RabbitMQConfiguration configuration;
         public RabbitMQService(IOptions<RabbitMQConfiguration> options)

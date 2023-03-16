@@ -15,6 +15,7 @@ using RabbitMQ.Client;
 using Infrastructure.Interfaces;
 using System.Text;
 using Newtonsoft.Json;
+using Microsoft.AspNetCore.Diagnostics;
 
 namespace AppBroker.Controllers
 {
@@ -75,7 +76,8 @@ namespace AppBroker.Controllers
                 using var model = connection.CreateModel();
                 var body = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(r.data));
                 model.BasicPublish("UserLoginExchange",string.Empty,basicProperties:null,body:body);
-                return Redirect("/User/UserManagement");
+                //return Redirect("/User/UserManagement");
+                return View(form);
             }
             else
             {
@@ -116,7 +118,8 @@ namespace AppBroker.Controllers
         {
             var form = HttpContext.Request.Form;
             var data = await userService.GridListUserQueryrable(form);
-            return new JsonResult(data);
+            var result = new JsonResult(data);
+            return result;
         }
         public IActionResult AddNewUser()
         {
@@ -190,7 +193,10 @@ namespace AppBroker.Controllers
                 files[0].CopyTo(stream);
                 IExcelImporter Importer = new ExcelImporter();
                 var data = await Importer.Import<UserimportDto>(stream);
-                if (data.Data is null) throw new Exception("Invalid template import user management");
+                //if (data.Data is null)
+                //{
+                //    throw new Exception("Invalid template import user management");
+                //}
                 IList<DataRowErrorInfo> rowErros = data.RowErrors;
                 List<UserimportDto> importData = data.Data.Cast<UserimportDto>().ToList();
                 foreach (var item in rowErros)
@@ -199,8 +205,8 @@ namespace AppBroker.Controllers
                     //Has index header
                     importData[item.RowIndex - 2].Errors = string.Join("|", fieldErrors);
                 }
-                var result = await userService.ImportUser(importData,HttpContext.User.Claims.Where(s=>s.Type == ClaimTypes.Name).First().Value);
-                if (IsFeedback && result.Where(s=>s.Errors!=null).Count()>0)
+                var result = await userService.ImportUser(importData, HttpContext.User.Claims.Where(s => s.Type == ClaimTypes.Name).First().Value);
+                if (IsFeedback && result.Where(s => s.Errors != null).Count() > 0)
                 {
                     IExcelExporter exporter = new ExcelExporter();
                     var fileContent = await exporter.ExportAsByteArray(result);

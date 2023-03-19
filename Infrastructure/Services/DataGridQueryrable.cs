@@ -1,5 +1,8 @@
 ﻿using System.Linq.Expressions;
 using System.Reflection;
+using System.Reflection.Metadata;
+using DynamicExpresso;
+using Infrastructure.Entity;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 
@@ -151,23 +154,46 @@ namespace Infrastructure.Services
             {
                 var propDay = Expression.Property(param, "Day");
                 var resDay = Expression.Equal(propDay, Expression.Constant(DayOrYear));
-                
                 var propYear = Expression.Property(param, "Year");
                 var resYear = Expression.Equal(propYear, Expression.Constant(DayOrYear));
                 var expression = Expression.Or(resDay, resYear);
                 buildExpression.Add(expression);
             }
-
             Expression bodyExpression = buildExpression
                     .Aggregate(
                         (prev, current) => Expression.Or(prev, current)
                     );
             return bodyExpression;
         }
-
+        private static Expression? ExpressionLike(ConstantExpression constant, ParameterExpression parameter,string item,bool IsStringType)
+        {
+            var efLike = typeof(DbFunctionsExtensions).GetMethod("Like",
+                BindingFlags.Static | BindingFlags.Public, null,
+                new[]
+                {
+                    typeof(DbFunctions),typeof(string),typeof(string)
+                }, null);
+            if (efLike is null) return null;
+            // We make a pattern for the search
+            if(IsStringType)
+            {
+                Expression expr = Expression.Call(efLike,
+                Expression.Property(null, typeof(EF), nameof(EF.Functions)), Expression.PropertyOrField(parameter, item)
+                , constant);
+                return expr;
+            }
+            else
+            {
+                MemberExpression param = Expression.PropertyOrField(parameter, item);
+                MethodCallExpression methodCallExpressionToString = Expression.Call(param, "ToString", null);
+                var propFunc = Expression.Property(null, typeof(EF), nameof(EF.Functions));
+                MethodCallExpression EfLikeFunc = Expression.Call(efLike,propFunc,methodCallExpressionToString,constant);
+                return EfLikeFunc;
+            }
+        }
         private static IQueryable<T> SearchGrid<T>(this IQueryable<T> source, string searchValue, List<string> Field)
         {
-            searchValue = string.IsNullOrEmpty(searchValue) ? "" : searchValue.Trim().ToLower();
+            searchValue = $"{searchValue?.Trim().ToLower()}%" ?? "";
             ConstantExpression expressionConstant = Expression.Constant(searchValue);
 
             if (string.IsNullOrEmpty(searchValue)) return source;
@@ -187,18 +213,21 @@ namespace Infrastructure.Services
             {
                 if (stringProperties.Any(s => s.Name == item && s.PropertyType == typeof(string)))
                 {
-                    var contains = Expression.Call(Expression.PropertyOrField(parameter, item), "Contains", null, expressionConstant);
-                    buildExpression.Add(contains);
+                    var expr = ExpressionLike(constant: expressionConstant, parameter, item,true);
+                    if (expr is null) continue;
+                    buildExpression.Add(expr);
                 }
-                else if(stringProperties.Any(s=>s.Name == item && (s.PropertyType == typeof(DateTime) || s.PropertyType == typeof(DateTime?)) ))
+                else if (stringProperties.Any(s => s.Name == item && (s.PropertyType == typeof(DateTime) || s.PropertyType == typeof(DateTime?))))
                 {
-                    var buildExpDate = BuildExpressionSearchDate(parameter,item, searchValue);
-                    if(buildExpDate!=null) buildExpression.Add(buildExpDate);
+                    var buildExpDate = BuildExpressionSearchDate(parameter, item, searchValue);
+                    if (buildExpDate is null) continue;
+                    buildExpression.Add(buildExpDate);
                 }
                 else
                 {
-                    var contains = Expression.Call(Expression.Call(Expression.PropertyOrField(parameter, item), "ToString", null), "Contains", null, expressionConstant);
-                    buildExpression.Add(contains);
+                    var expr = ExpressionLike(constant: expressionConstant, parameter, item, false);
+                    if (expr is null) continue;
+                    buildExpression.Add(expr);
                 }
             }
 

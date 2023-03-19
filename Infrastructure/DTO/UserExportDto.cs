@@ -58,6 +58,6 @@ namespace Infrastructure
         public string PasswordHash { get; set; } = null!;
         [ExporterHeader(DisplayName = "Errors")]
         [ImporterHeader(Name = "Errors",IsIgnore =true)]
-        public string Errors { get; set; } = null;
+        public string? Errors { get; set; }
     }
 }

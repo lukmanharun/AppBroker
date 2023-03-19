@@ -8,24 +8,28 @@ using Infrastructure.DTO;
 using Infrastructure.Interfaces;
 using Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Serilog;
 using Serilog.Sinks.MSSqlServer;
-using static System.Net.Mime.MediaTypeNames;
 
-var builder = WebApplication.CreateBuilder(args);
+var builder = WebApplication.CreateBuilder(args); 
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
 var conDefault = builder.Configuration.GetConnectionString("Default");
+var conLogs = builder.Configuration.GetConnectionString("DbLog");
 #region Serilog
 
 string environment = string.Empty;
 if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == null) throw new Exception("Environtment object null");
-var sinkOpts = new MSSqlServerSinkOptions();
-sinkOpts.TableName = "Log";
-sinkOpts.LevelSwitch = new Serilog.Core.LoggingLevelSwitch
+var sinkOpts = new MSSqlServerSinkOptions()
 {
-    MinimumLevel = Serilog.Events.LogEventLevel.Error
+    TableName = "Logs",
+    AutoCreateSqlTable = true,
+    LevelSwitch = new Serilog.Core.LoggingLevelSwitch
+    {
+        MinimumLevel = Serilog.Events.LogEventLevel.Information
+    }
 };
 
 var columnOpts = new ColumnOptions();
@@ -40,12 +44,12 @@ Log.Logger = new LoggerConfiguration()
     .WriteTo.File("bin/AppLog/Log.text",
         rollingInterval: RollingInterval.Day,
         rollOnFileSizeLimit: true,
-        restrictedToMinimumLevel: Serilog.Events.LogEventLevel.Error)
+        restrictedToMinimumLevel: Serilog.Events.LogEventLevel.Information)
     .WriteTo.MSSqlServer(
-        connectionString: conDefault,
+        connectionString: conLogs,
         sinkOptions: sinkOpts,
         columnOptions: columnOpts,
-        restrictedToMinimumLevel:Serilog.Events.LogEventLevel.Error
+        restrictedToMinimumLevel:Serilog.Events.LogEventLevel.Information
     )
     .Enrich.WithProperty("Environment", environment)
     .ReadFrom.Configuration(new ConfigurationBuilder()
@@ -54,19 +58,12 @@ Log.Logger = new LoggerConfiguration()
         $"appsettings.{environment}.json",optional: true)
 .Build())
 .CreateLogger();
-//Serilog.Debugging.SelfLog.Enable(msg =>
-//{
-//    Debug.Print(msg);
-//    Debugger.Break();
-//});
 builder.Host.UseSerilog();
 #endregion
 builder.Services.AddDbContextPool<AppDbContext>(opt =>
 {
     opt.UseSqlServer(conDefault);
 });
-
-builder.Services.AddAuthorization();
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
@@ -75,12 +72,11 @@ builder.Services.AddAutoMapper(typeof(MapperProfile));
 builder.Services.AddScoped<IHelper, Helper>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IHelperService, HelperService>();
-//builder.Services.AddDirectoryBrowser(); 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(
         options =>
         {
-            options.ExpireTimeSpan = TimeSpan.FromSeconds(3);
+            options.ExpireTimeSpan = TimeSpan.FromHours(10);
             options.SlidingExpiration = true;
             options.AccessDeniedPath = new PathString("/User/Forbidden");
             options.LoginPath = new PathString("/User/SignIn");
@@ -88,10 +84,13 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         });
 builder.Services.AddHttpContextAccessor();
 //Message broker DI
-builder.Services.Configure<RabbitMQConfiguration>(opt =>builder.Configuration.GetSection(nameof(RabbitMQConfiguration)).Bind(opt));
+builder.Services.Configure<RabbitMQConfiguration>(opt => builder.Configuration.GetSection(nameof(RabbitMQConfiguration)).Bind(opt));
 builder.Services.AddSingleton<IRabbitMQService, RabbitMQService>();
 builder.Services.AddSingleton<IMessageBrokerService, MessageBrokerService>();
-builder.Services.AddHostedService<ConsumerHostedService>();
+//builder.Services.AddHostedService<ConsumerHostedService>();
+
+//builder.Services.Configure<ConsumerConfig>(opt => builder.Configuration.GetSection(nameof(ConsumerConfig)).Bind(opt));
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -124,12 +123,12 @@ app.UseDirectoryBrowser(new DirectoryBrowserOptions
     RequestPath = folderRoot,
 });
 
-//app.Use( async (context, next) =>
-//{
-//    if (context.Response.StatusCode == 401)
-//        context.Request.Path = "/User/SignIn";
-//    await next();
-//});
+app.Use(async (context, next) =>
+{
+    if (context.Response.StatusCode == 401)
+        context.Request.Path = "/User/SignIn";
+    await next();
+});
 
 app.UseRouting();
 app.UseCookiePolicy(new CookiePolicyOptions

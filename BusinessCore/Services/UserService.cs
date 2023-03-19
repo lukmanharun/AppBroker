@@ -27,10 +27,6 @@ namespace BusinessCore.Services
 
         public async Task<GridDataTable<UserListDTO>> GridListUserQueryrable(IFormCollection form)
         {
-            var r = await dbcontext.AspNetUsers.ToListAsync();
-            var dto = mapper.Map<List<UserListDTO>>(r);
-
-
             return await dbcontext.AspNetUsers.Select(s => new UserListDTO
             {
                 FirstName = s.FirstName,

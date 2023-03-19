@@ -15,7 +15,15 @@ using RabbitMQ.Client;
 using Infrastructure.Interfaces;
 using System.Text;
 using Newtonsoft.Json;
-using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.EntityFrameworkCore;
+using System.Linq.Expressions;
+using Infrastructure.Data;
+using Microsoft.Extensions.FileSystemGlobbing.Internal;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
+using Infrastructure.Entity;
+using System.Reflection;
+using OfficeOpenXml.FormulaParsing.Excel.Functions.Text;
+using SkiaSharp;
 
 namespace AppBroker.Controllers
 {
@@ -27,14 +35,30 @@ namespace AppBroker.Controllers
         private readonly IHelperService helperService;
         private readonly ILogger<UserController> logger;
         private readonly IRabbitMQService rabbitMQService;
+        private readonly AppDbContext dbContext;
         public UserController(IUserService userService, IMapper Mapper, IHelperService helperService
-            ,ILogger<UserController> logger, IRabbitMQService rabbitMQService)
+            ,ILogger<UserController> logger, IRabbitMQService rabbitMQService, AppDbContext dbContext)
         {
             this.rabbitMQService = rabbitMQService;
             this.helperService = helperService;
             this.Mapper = Mapper;
             this.userService = userService;
             this.logger = logger;
+            this.dbContext = dbContext;
+
+        }
+        public IActionResult UserManagement()
+        {
+            return View();
+        }
+        [HttpPost("User/GetGridUser")]
+        [Produces("application/json")]
+        public async Task<IActionResult> GetGridUser()
+        {
+            var form = HttpContext.Request.Form;
+            var data = await userService.GridListUserQueryrable(form);
+            var result = new JsonResult(data);
+            return result;
         }
         [AllowAnonymous]
         public IActionResult SignIn(string? returnUrl)
@@ -74,10 +98,12 @@ namespace AppBroker.Controllers
                     , authProperties);
                 using var connection = this.rabbitMQService.CreateChannel();
                 using var model = connection.CreateModel();
-                var body = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(r.data));
-                model.BasicPublish("UserLoginExchange",string.Empty,basicProperties:null,body:body);
-                //return Redirect("/User/UserManagement");
-                return View(form);
+                var jsonData = JsonConvert.SerializeObject(r.data);
+                var body = Encoding.UTF8.GetBytes(jsonData);
+
+                model.BasicPublish("UserLoginExchange", string.Empty, basicProperties: null, body: body);
+                return Redirect("/User/UserManagement");
+                //return View(form);
             }
             else
             {
@@ -107,19 +133,6 @@ namespace AppBroker.Controllers
             {
                 return View(form);
             }
-        }
-        public IActionResult UserManagement()
-        {
-            return View();
-        }
-        [HttpPost("User/GetGridUser")]
-        [Produces("application/json")]
-        public async Task<IActionResult> GetGridUser()
-        {
-            var form = HttpContext.Request.Form;
-            var data = await userService.GridListUserQueryrable(form);
-            var result = new JsonResult(data);
-            return result;
         }
         public IActionResult AddNewUser()
         {

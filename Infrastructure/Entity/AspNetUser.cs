@@ -15,6 +15,8 @@ public partial class AspNetUser
 
     public string PasswordHash { get; set; } = null!;
 
+    public string? StatusCode { get; set; }
+
     public byte[] Version { get; set; } = null!;
 
     public DateTime CreatedAt { get; set; }
@@ -26,4 +28,6 @@ public partial class AspNetUser
     public string? ModifiedBy { get; set; }
 
     public DateTime? LastChanged { get; set; }
+
+    public virtual ICollection<SalesOrderHd> SalesOrderHds { get; } = new List<SalesOrderHd>();
 }

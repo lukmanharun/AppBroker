@@ -1,14 +1,34 @@
-﻿using System.Linq.Expressions;
+﻿using System.Collections;
+using System.Linq.Expressions;
 using System.Reflection;
-using System.Reflection.Metadata;
-using DynamicExpresso;
-using Infrastructure.Entity;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
-using OfficeOpenXml.FormulaParsing.Excel.Functions.DateTime;
 
 namespace Infrastructure.Services
 {
+    internal readonly struct MonthDictionary
+    {
+        private readonly Dictionary<string, int> Data;
+        public MonthDictionary()
+        {
+            Data = new Dictionary<string, int>
+            {
+                {"jan",1},
+                {"feb",2},
+                {"mar",3},
+                {"apr",4},
+                {"mey",5},
+                {"jun",6},
+                {"jul",7},
+                {"aug",8},
+                {"sep",9},
+                {"okt",10},
+                {"nov",11},
+                {"dec",12}
+            };
+        }
+        public Dictionary<string, int> Get { get { return Data;} }
+    }
     public static class DataGridQueryrable
     {
         #region Data Grid
@@ -66,27 +86,11 @@ namespace Infrastructure.Services
                 data = data
             };
         }
-        private static Dictionary<string, int> DictionaryMonthENG()
-        {
-            return new Dictionary<string, int>
-            {
-                {"jan",1},
-                {"feb",2},
-                {"mar",3},
-                {"apr",4},
-                {"mey",5},
-                {"jun",6},
-                {"jul",7},
-                {"aug",8},
-                {"sep",9},
-                {"okt",10},
-                {"nov",11},
-                {"dec",12}
-            };
-        }
 
         private static Expression? BuildExpressionSearchDate(ParameterExpression parameter,string propertyItem,string search)
         {
+            var months = new MonthDictionary().Get;
+
             List<Expression> buildExpression = new List<Expression>();
             bool IsValid = false;
             List<KeyValuePair<string, int>> listMonth = new List<KeyValuePair<string, int>>();
@@ -103,7 +107,7 @@ namespace Infrastructure.Services
                 int.TryParse(sr[2], out year);
                 int.TryParse(sr[0], out day);
                 if (day == 0 || year == 0) return null;
-                listMonth = DictionaryMonthENG().Where(s => s.Key.Contains(sr[1])).ToList();
+                listMonth = new MonthDictionary().Get.Where(s => s.Key.Contains(sr[1])).ToList();
                 IsValid = listMonth.Count() == 1;
             }
             else if(sr.Count() == 2)
@@ -112,7 +116,7 @@ namespace Infrastructure.Services
                 int.TryParse(sr[0], out day);
                 int.TryParse(sr[1], out year);
                 if (day == 0 && year == 0) return null;
-                listMonth = DictionaryMonthENG().Where(s => s.Key.ToLower() == sr[0].ToLower() || s.Key.Contains(sr[1])).ToList();
+                listMonth = months.Where(s => s.Key.ToLower() == sr[0].ToLower() || s.Key.Contains(sr[1])).ToList();
                 IsValid = (listMonth.Where(s => s.Key.Contains(sr[0])).Count() == 1
                     || listMonth.Where(s => s.Key.Contains(sr[1])).Count() > 0)
                     ? true:false;
@@ -121,11 +125,10 @@ namespace Infrastructure.Services
             {
                 //Format should dd or MMMM or yyyy
                 int.TryParse(sr[0], out DayOrYear);
-                if (DayOrYear == 0) return null;
-                listMonth = DictionaryMonthENG().Where(s => s.Key.Contains(sr[0])).ToList();
-                IsValid = listMonth.Count() > 0;
+                listMonth = months.Where(s => s.Key.Contains(sr[0])).ToList();
+                IsValid = listMonth.Count() > 0 || DayOrYear>0;
             }
-            if(!IsValid) return null;
+            if (!IsValid) return null;
             var param = Expression.Property(parameter, propertyItem);
             
             if(day > 0 && year > 0)
@@ -163,7 +166,7 @@ namespace Infrastructure.Services
                 var res = Expression.Equal(Expression.Property(param, "Day"), Expression.Constant(day));
                 Expression result = new Expression[]
                 {
-                        expresionMonth,res
+                    expresionMonth,res
                 }.Aggregate((prev, current) => Expression.And(prev, current));
                 return result;
             }
@@ -173,11 +176,11 @@ namespace Infrastructure.Services
                 var res = Expression.Equal(Expression.Property(param, "Year"), Expression.Constant(year));
                 Expression result = new Expression[]
                 {
-                        expresionMonth,res
+                    expresionMonth,res
                 }.Aggregate((prev, current) => Expression.And(prev, current));
                 return result;
             }
-            return null;
+            return expresionMonth;
         }
         private static Expression? ExpressionLike(ConstantExpression constant, ParameterExpression parameter,string item,bool IsStringType)
         {

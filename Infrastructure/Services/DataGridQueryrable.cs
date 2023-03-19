@@ -5,6 +5,7 @@ using DynamicExpresso;
 using Infrastructure.Entity;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using OfficeOpenXml.FormulaParsing.Excel.Functions.DateTime;
 
 namespace Infrastructure.Services
 {
@@ -41,7 +42,8 @@ namespace Infrastructure.Services
             var take = Convert.ToInt32(length);
             var skip = Convert.ToInt32(start);
 
-            Queryrable = Queryrable.SearchGrid<T>(searchValue, Field);
+            if(!string.IsNullOrEmpty(searchValue)) Queryrable = Queryrable.SearchGrid<T>(searchValue, Field);
+            
             IQueryable<T> queryOri = Queryrable;
             var rowCount = await queryOri.CountAsync();
 
@@ -98,72 +100,84 @@ namespace Infrastructure.Services
             if(sr.Count()==3)
             {
                 //Format should dd MMMM yyyy
-                listMonth = DictionaryMonthENG().Where(s => sr[1].Contains(s.Key)).ToList();
-                IsValid = listMonth.Count() > 0 && int.TryParse(sr[2], out year ) && int.TryParse(sr[0], out day);
-                if (!IsValid) return null;
+                int.TryParse(sr[2], out year);
+                int.TryParse(sr[0], out day);
+                if (day == 0 || year == 0) return null;
+                listMonth = DictionaryMonthENG().Where(s => s.Key.Contains(sr[1])).ToList();
+                IsValid = listMonth.Count() == 1;
             }
             else if(sr.Count() == 2)
             {
                 //Format should dd MMMM or MMMM yyyy
-                listMonth = DictionaryMonthENG().Where(s => sr[0].Contains(s.Key) || sr[1].Contains(s.Key)).ToList();
-                IsValid = listMonth.Count() > 0 && (int.TryParse(sr[0],out day) || int.TryParse(sr[1], out year));
-                if (!IsValid) return null;
+                int.TryParse(sr[0], out day);
+                int.TryParse(sr[1], out year);
+                if (day == 0 && year == 0) return null;
+                listMonth = DictionaryMonthENG().Where(s => s.Key.ToLower() == sr[0].ToLower() || s.Key.Contains(sr[1])).ToList();
+                IsValid = (listMonth.Where(s => s.Key.Contains(sr[0])).Count() == 1
+                    || listMonth.Where(s => s.Key.Contains(sr[1])).Count() > 0)
+                    ? true:false;
             }
             else if(sr.Count() == 1)
             {
                 //Format should dd or MMMM or yyyy
-                listMonth = DictionaryMonthENG().Where(s => sr[0].Contains(s.Key)).ToList();
-                IsValid = listMonth.Count() > 0 || int.TryParse(sr[0],out DayOrYear);
-                if (!IsValid) return null;
+                int.TryParse(sr[0], out DayOrYear);
+                if (DayOrYear == 0) return null;
+                listMonth = DictionaryMonthENG().Where(s => s.Key.Contains(sr[0])).ToList();
+                IsValid = listMonth.Count() > 0;
             }
             if(!IsValid) return null;
             var param = Expression.Property(parameter, propertyItem);
             
-            if (listMonth.Count() > 0)
+            if(day > 0 && year > 0)
             {
-                List<Expression> buildExpressionMonth = new List<Expression>();
-                //Build Expression month
-                for (int i = 0; i < listMonth.Count(); i++)
+                //dd MMMM yyy
+                var resmonth = Expression.Equal(Expression.Property(param, "Month"), Expression.Constant(listMonth[0].Value));
+                var resDay = Expression.Equal(Expression.Property(param, "Day"), Expression.Constant(day));
+                var resYear = Expression.Equal(Expression.Property(param, "Year"), Expression.Constant(year));
+                Expression res = new Expression[] 
                 {
-                    var monthProp = Expression.Property(param, "Month");
-                    var resmonth = Expression.Equal(monthProp, Expression.Constant(listMonth[i].Value));
-                    buildExpressionMonth.Add(resmonth);
-                }
-                Expression bodyMonth = buildExpressionMonth
-                        .Aggregate(
-                            (prev, current) => Expression.Or(prev, current)
-                        );
-                buildExpression.Add(bodyMonth);
+                    resDay,resmonth,resYear
+                }.Aggregate((prev, current) => Expression.And(prev, current));
+                return res;
             }
-            //Build Day
-            if (day > 0)
+            List<BinaryExpression> listExpressionMonth = new List<BinaryExpression>();
+            foreach (var item in listMonth)
             {
-                var prop = Expression.Property(param, "Day");
-                var res = Expression.Equal(prop, Expression.Constant(day));
-                buildExpression.Add(res);
+                listExpressionMonth.Add(Expression.Equal(Expression.Property(param, "Month"), Expression.Constant(item.Value)));
             }
-            //Build Year
-            if (year > 0)
-            {
-                var prop = Expression.Property(param, "Year");
-                var res = Expression.Equal(prop, Expression.Constant(year));
-                buildExpression.Add(res);
-            }
-            //Build Day Or Year
+            BinaryExpression expresionMonth = listExpressionMonth.Aggregate((prev, current) => Expression.Or(prev, current));
+
             if (DayOrYear > 0)
             {
+                //Pattern dd or yyyy
                 var propDay = Expression.Property(param, "Day");
                 var resDay = Expression.Equal(propDay, Expression.Constant(DayOrYear));
                 var propYear = Expression.Property(param, "Year");
                 var resYear = Expression.Equal(propYear, Expression.Constant(DayOrYear));
-                var expression = Expression.Or(resDay, resYear);
-                buildExpression.Add(expression);
+                BinaryExpression result = Expression.Or(resDay, resYear);
+                return result;
             }
-            Expression bodyExpression = buildExpression
-                    .Aggregate(
-                        (prev, current) => Expression.Or(prev, current)
-                    );
-            return bodyExpression;
+            else if (day > 0)
+            {
+                //Pattern dd MMMM
+                var res = Expression.Equal(Expression.Property(param, "Day"), Expression.Constant(day));
+                Expression result = new Expression[]
+                {
+                        expresionMonth,res
+                }.Aggregate((prev, current) => Expression.And(prev, current));
+                return result;
+            }
+            else if (year > 0)
+            {
+                //Pattern MMMM yyyy
+                var res = Expression.Equal(Expression.Property(param, "Year"), Expression.Constant(year));
+                Expression result = new Expression[]
+                {
+                        expresionMonth,res
+                }.Aggregate((prev, current) => Expression.And(prev, current));
+                return result;
+            }
+            return null;
         }
         private static Expression? ExpressionLike(ConstantExpression constant, ParameterExpression parameter,string item,bool IsStringType)
         {
@@ -182,21 +196,16 @@ namespace Infrastructure.Services
                 , constant);
                 return expr;
             }
-            else
-            {
-                MemberExpression param = Expression.PropertyOrField(parameter, item);
-                MethodCallExpression methodCallExpressionToString = Expression.Call(param, "ToString", null);
-                var propFunc = Expression.Property(null, typeof(EF), nameof(EF.Functions));
-                MethodCallExpression EfLikeFunc = Expression.Call(efLike,propFunc,methodCallExpressionToString,constant);
-                return EfLikeFunc;
-            }
+            MemberExpression param = Expression.PropertyOrField(parameter, item);
+            MethodCallExpression methodCallExpressionToString = Expression.Call(param, "ToString", null);
+            var propFunc = Expression.Property(null, typeof(EF), nameof(EF.Functions));
+            MethodCallExpression EfLikeFunc = Expression.Call(efLike, propFunc, methodCallExpressionToString, constant);
+            return EfLikeFunc;
         }
         private static IQueryable<T> SearchGrid<T>(this IQueryable<T> source, string searchValue, List<string> Field)
         {
-            searchValue = $"{searchValue?.Trim().ToLower()}%" ?? "";
-            ConstantExpression expressionConstant = Expression.Constant(searchValue);
-
-            if (string.IsNullOrEmpty(searchValue)) return source;
+            searchValue = $"{searchValue?.Trim().ToLower()}" ?? "";
+            ConstantExpression expressionConstant = Expression.Constant($"{searchValue}%");
             // T is a compile-time placeholder for the element type of the query.
             Type elementType = typeof(T);
 

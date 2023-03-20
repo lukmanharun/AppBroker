@@ -1,7 +1,4 @@
 ﻿using AppBroker.Interfaces;
-using Microsoft.AspNetCore.Http;
-using System.IO;
-
 namespace AppBroker.Services
 {
     public class HelperService :IHelperService

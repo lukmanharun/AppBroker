@@ -1,4 +1,5 @@
 using AppBroker.Interfaces;
+using AppBroker.Models;
 using AppBroker.Services;
 using BusinessCore.Entity;
 using BusinessCore.Interfaces;
@@ -9,22 +10,17 @@ using Infrastructure.Interfaces;
 using Infrastructure.Services;
 using Infrastructure.Services.Kafka;
 using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Hosting.Server;
-using Microsoft.Data.SqlClient;
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.Extensions.FileProviders;
 using Serilog;
+using Serilog.Core;
+using Serilog.Events;
 using Serilog.Sinks.MSSqlServer;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
-//builder.WebHost.ConfigureKestrel(options =>
-//{
-//    options.ConfigureHttpsDefaults(o =>
-//    {
-//        o.SslProtocols = System.Security.Authentication.SslProtocols.Tls12;
-//    });
-//});
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 var conDefault = builder.Configuration.GetConnectionString("Default");
@@ -37,17 +33,13 @@ var sinkOpts = new MSSqlServerSinkOptions()
 {
     TableName = "Logs",
     AutoCreateSqlTable = true,
+    BatchPeriod = TimeSpan.FromSeconds(1),
     LevelSwitch = new Serilog.Core.LoggingLevelSwitch
     {
-        MinimumLevel = Serilog.Events.LogEventLevel.Information
+        MinimumLevel = Serilog.Events.LogEventLevel.Error
     }
 };
 
-var columnOpts = new ColumnOptions();
-columnOpts.Store.Remove(StandardColumn.Properties);
-columnOpts.Store.Add(StandardColumn.LogEvent);
-columnOpts.LogEvent.DataLength = 2048;
-columnOpts.TimeStamp.NonClusteredIndex = true;
 Log.Logger = new LoggerConfiguration()
     .Enrich.FromLogContext()
     .WriteTo.Debug()
@@ -55,13 +47,12 @@ Log.Logger = new LoggerConfiguration()
     .WriteTo.File("bin/AppLog/Log.text",
         rollingInterval: RollingInterval.Day,
         rollOnFileSizeLimit: true,
+        restrictedToMinimumLevel: Serilog.Events.LogEventLevel.Error)
+    .WriteTo.File("bin/AppLog/Log_Info.text",
+        rollingInterval: RollingInterval.Day,
+        rollOnFileSizeLimit: true,
         restrictedToMinimumLevel: Serilog.Events.LogEventLevel.Information)
-    .WriteTo.MSSqlServer(
-        connectionString: conLogs,
-        sinkOptions: sinkOpts,
-        columnOptions: columnOpts,
-        restrictedToMinimumLevel:Serilog.Events.LogEventLevel.Information
-    )
+    .AuditTo.MSSqlServer(conLogs,sinkOpts,restrictedToMinimumLevel:LogEventLevel.Error)
     .Enrich.WithProperty("Environment", environment)
     .ReadFrom.Configuration(new ConfigurationBuilder()
     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
@@ -70,6 +61,7 @@ Log.Logger = new LoggerConfiguration()
 .Build())
 .CreateLogger();
 builder.Host.UseSerilog();
+builder.Services.AddSingleton(Log.Logger);
 #endregion
 builder.Services.AddDbContextPool<AppDbContext>(opt =>
 {
@@ -97,8 +89,8 @@ builder.Services.AddSingleton<IRabbitMQService, RabbitMQService>();
 builder.Services.AddSingleton<IMessageBrokerService, MessageBrokerService>();
 builder.Services.AddHostedService<ConsumerHostedService>();
 //builder.Services.Configure<ConsumerConfig>(opt => builder.Configuration.GetSection(nameof(ConsumerConfig)).Bind(opt));
-
-builder.Services.AddSingleton<KafkaProducer>();
+builder.Services.AddHttpClient<HttpServices>().AddPolicyHandler(HttpClientHelper.GetRetryPolicy());
+//builder.Services.AddSingleton<KafkaProducer>();
 //builder.Services.AddHostedService<KafkaConsumer>();
 //builder.Services.AddSingleton<IHostedService,KafkaConsumer>();
 // Add services to the container.
@@ -140,6 +132,14 @@ app.Use(async (context, next) =>
 {
     if (context.Response.StatusCode == 401)
         context.Request.Path = "/User/SignIn";
+    else if (context.Response.StatusCode == 500)
+    {
+        var pathOri = context.Request.Path;
+        context.Request.Path = "/GlobalHandling/index";
+        var handler = context.Features.Get<IExceptionHandlerPathFeature>();
+        var log = context.RequestServices.GetService<Serilog.ILogger>();
+        log?.Error(handler?.Error.Message??$"Internl Server Error:{pathOri}");
+    }
     await next();
 });
 

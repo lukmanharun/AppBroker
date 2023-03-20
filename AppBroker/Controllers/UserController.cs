@@ -19,6 +19,8 @@ using Microsoft.EntityFrameworkCore;
 using Infrastructure.Data;
 using Confluent.Kafka;
 using Infrastructure.Services.Kafka;
+using Infrastructure.Entity;
+using System.Linq;
 
 namespace AppBroker.Controllers
 {
@@ -31,13 +33,13 @@ namespace AppBroker.Controllers
         private readonly ILogger<UserController> logger;
         private readonly IRabbitMQService rabbitMQService;
         private readonly AppDbContext dbContext;
-        private readonly KafkaProducer kafkaProducer;
+        //private readonly KafkaProducer kafkaProducer;
         public UserController(IUserService userService, IMapper Mapper, IHelperService helperService
             ,ILogger<UserController> logger, IRabbitMQService rabbitMQService, AppDbContext dbContext
-            , KafkaProducer kafkaProducer
+            //, KafkaProducer kafkaProducer
             )
         {
-            this.kafkaProducer = kafkaProducer;
+            //this.kafkaProducer = kafkaProducer;
             this.rabbitMQService = rabbitMQService;
             this.helperService = helperService;
             this.Mapper = Mapper;
@@ -54,6 +56,55 @@ namespace AppBroker.Controllers
         [Produces("application/json")]
         public async Task<IActionResult> GetGridUser()
         {
+            var resError = await (from a in dbContext.AspNetUsers
+                            select new
+                            {
+                                DataApi = new List<string>
+                          {
+                              "Data From another API","Consume data from list","Etc"
+                          },
+                                ConsumeLogic = a.CreatedAt.ToString("dd MMMM yyyy"),
+                                Logic1 = EF.Functions.Like(a.FirstName.ToLower(), "test%") ? 1 : 0,
+                                FirstName = a.FirstName
+                            }).ToListAsync();
+            var Testdata = dbContext.AspNetUsers
+                .GroupBy(s => new
+                {
+                    s.FirstName,
+                    s.LastName
+                }).Select(s => new UserListDTO
+                {
+                    FirstName = s.Key.FirstName,
+                    LastName = s.Key.LastName,
+                    Count = s.Count()
+                })
+                .OrderBy(s => s.FirstName);
+            var res = from a in dbContext.AspNetUsers
+                      join b in Testdata on a.FirstName equals b.FirstName into bjoin
+                      from b in bjoin
+                      where b.Count > 1
+                      select new
+                      {
+                          DataApi = new List<string>
+                          {
+                              "Data From another API","Consume data from list","Etc"
+                          },
+                          //DataApi = new string[]
+                          //{
+                          //    "Data From another API","Consume data from list","Etc"
+                          //},
+                          ConsumeLogic = a.CreatedAt.ToString("dd MMMM yyyy"),
+                          Logic1 = EF.Functions.Like(a.FirstName.ToLower(),"test%")?1:0,
+                          FirstName = a.FirstName
+                      };
+            //var dataResponse = await res.AsNoTracking().ToListAsync();
+            var res2 = from a in dbContext.AspNetUsers
+                       where res.Any(s => s.FirstName == a.FirstName && s.Logic1==1)
+                       select new
+                       {
+                           FirstName = a.FirstName
+                       };
+            var dataResponse2 = await res2.AsNoTracking().ToListAsync();
             var form = HttpContext.Request.Form;
             var data = await userService.GridListUserQueryrable(form);
             var result = new JsonResult(data);

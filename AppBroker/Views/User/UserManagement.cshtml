@@ -9,6 +9,9 @@
                 url: '/User/GetGridUser',
                 dataSrc: 'data',
                 type: 'post',
+                error: function (xhr, status, error) {
+                    window.location.href = "/GlobalHandling/Index?IsDataTable=true";
+                }
             },
             processing: true,
             serverSide: true,

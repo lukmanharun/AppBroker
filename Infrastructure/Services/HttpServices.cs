@@ -9,5 +9,10 @@ namespace Infrastructure.Services
 {
     public class HttpServices : IHttpServices
     {
+        private readonly HttpClient _httpClient;
+        public HttpServices(HttpClient _httpClient)
+        {
+            this._httpClient = _httpClient;
+        }
     }
 }

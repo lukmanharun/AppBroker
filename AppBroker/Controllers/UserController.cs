@@ -16,14 +16,9 @@ using Infrastructure.Interfaces;
 using System.Text;
 using Newtonsoft.Json;
 using Microsoft.EntityFrameworkCore;
-using System.Linq.Expressions;
 using Infrastructure.Data;
-using Microsoft.Extensions.FileSystemGlobbing.Internal;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
-using Infrastructure.Entity;
-using System.Reflection;
-using OfficeOpenXml.FormulaParsing.Excel.Functions.Text;
-using SkiaSharp;
+using Confluent.Kafka;
+using Infrastructure.Services.Kafka;
 
 namespace AppBroker.Controllers
 {
@@ -36,9 +31,13 @@ namespace AppBroker.Controllers
         private readonly ILogger<UserController> logger;
         private readonly IRabbitMQService rabbitMQService;
         private readonly AppDbContext dbContext;
+        private readonly KafkaProducer kafkaProducer;
         public UserController(IUserService userService, IMapper Mapper, IHelperService helperService
-            ,ILogger<UserController> logger, IRabbitMQService rabbitMQService, AppDbContext dbContext)
+            ,ILogger<UserController> logger, IRabbitMQService rabbitMQService, AppDbContext dbContext
+            , KafkaProducer kafkaProducer
+            )
         {
+            this.kafkaProducer = kafkaProducer;
             this.rabbitMQService = rabbitMQService;
             this.helperService = helperService;
             this.Mapper = Mapper;
@@ -100,7 +99,8 @@ namespace AppBroker.Controllers
                 using var model = connection.CreateModel();
                 var jsonData = JsonConvert.SerializeObject(r.data);
                 var body = Encoding.UTF8.GetBytes(jsonData);
-
+                //var resultProduce = await this.kafkaProducer.ProduceAsync("SignIn", 
+                //    new Message<string, string> { Value = jsonData ,Key = Guid.NewGuid().ToString()});
                 model.BasicPublish("UserLoginExchange", string.Empty, basicProperties: null, body: body);
                 return Redirect("/User/UserManagement");
                 //return View(form);

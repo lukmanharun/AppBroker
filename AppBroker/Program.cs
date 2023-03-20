@@ -7,13 +7,24 @@ using Infrastructure.Data;
 using Infrastructure.DTO;
 using Infrastructure.Interfaces;
 using Infrastructure.Services;
+using Infrastructure.Services.Kafka;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Serilog;
 using Serilog.Sinks.MSSqlServer;
 
-var builder = WebApplication.CreateBuilder(args); 
+var builder = WebApplication.CreateBuilder(args);
+//builder.WebHost.ConfigureKestrel(options =>
+//{
+//    options.ConfigureHttpsDefaults(o =>
+//    {
+//        o.SslProtocols = System.Security.Authentication.SslProtocols.Tls12;
+//    });
+//});
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 var conDefault = builder.Configuration.GetConnectionString("Default");
@@ -65,9 +76,6 @@ builder.Services.AddDbContextPool<AppDbContext>(opt =>
     opt.UseSqlServer(conDefault);
 });
 
-// Add services to the container.
-builder.Services.AddControllersWithViews();
-
 builder.Services.AddAutoMapper(typeof(MapperProfile));
 builder.Services.AddScoped<IHelper, Helper>();
 builder.Services.AddScoped<IUserService, UserService>();
@@ -87,9 +95,14 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.Configure<RabbitMQConfiguration>(opt => builder.Configuration.GetSection(nameof(RabbitMQConfiguration)).Bind(opt));
 builder.Services.AddSingleton<IRabbitMQService, RabbitMQService>();
 builder.Services.AddSingleton<IMessageBrokerService, MessageBrokerService>();
-//builder.Services.AddHostedService<ConsumerHostedService>();
-
+builder.Services.AddHostedService<ConsumerHostedService>();
 //builder.Services.Configure<ConsumerConfig>(opt => builder.Configuration.GetSection(nameof(ConsumerConfig)).Bind(opt));
+
+builder.Services.AddSingleton<KafkaProducer>();
+//builder.Services.AddHostedService<KafkaConsumer>();
+//builder.Services.AddSingleton<IHostedService,KafkaConsumer>();
+// Add services to the container.
+builder.Services.AddControllersWithViews();
 
 var app = builder.Build();
 

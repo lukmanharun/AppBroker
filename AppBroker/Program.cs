@@ -1,5 +1,4 @@
 using AppBroker.Interfaces;
-using AppBroker.Models;
 using AppBroker.Services;
 using BusinessCore.Entity;
 using BusinessCore.Interfaces;
@@ -8,17 +7,14 @@ using Infrastructure.Data;
 using Infrastructure.DTO;
 using Infrastructure.Interfaces;
 using Infrastructure.Services;
-using Infrastructure.Services.Kafka;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Mvc.Razor;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.Extensions.FileProviders;
 using Serilog;
-using Serilog.Core;
 using Serilog.Events;
 using Serilog.Sinks.MSSqlServer;
-using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Logging.ClearProviders();
@@ -36,18 +32,18 @@ var sinkOpts = new MSSqlServerSinkOptions()
     BatchPeriod = TimeSpan.FromSeconds(1),
     LevelSwitch = new Serilog.Core.LoggingLevelSwitch
     {
-        MinimumLevel = Serilog.Events.LogEventLevel.Error
+        MinimumLevel = LogEventLevel.Error
     }
 };
 
 Log.Logger = new LoggerConfiguration()
     .Enrich.FromLogContext()
     .WriteTo.Debug()
-    .WriteTo.Console(Serilog.Events.LogEventLevel.Information)
+    .WriteTo.Console(LogEventLevel.Information)
     .WriteTo.File("bin/AppLog/Log.text",
         rollingInterval: RollingInterval.Day,
         rollOnFileSizeLimit: true,
-        restrictedToMinimumLevel: Serilog.Events.LogEventLevel.Error)
+        restrictedToMinimumLevel: LogEventLevel.Error)
     .WriteTo.File("bin/AppLog/Log_Info.text",
         rollingInterval: RollingInterval.Day,
         rollOnFileSizeLimit: true,
@@ -82,17 +78,16 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
             options.LoginPath = new PathString("/User/SignIn");
             options.LogoutPath = new PathString("/User/Logout");
         });
-builder.Services.AddHttpContextAccessor();
+builder.Services.Configure<RazorViewEngineOptions>(o =>
+{
+    o.ViewLocationFormats.Add("{0}" + RazorViewEngine.ViewExtension);
+});
+//builder.Services.AddHttpContextAccessor();
 //Message broker DI
 builder.Services.Configure<RabbitMQConfiguration>(opt => builder.Configuration.GetSection(nameof(RabbitMQConfiguration)).Bind(opt));
 builder.Services.AddSingleton<IRabbitMQService, RabbitMQService>();
 builder.Services.AddSingleton<IMessageBrokerService, MessageBrokerService>();
 builder.Services.AddHostedService<ConsumerHostedService>();
-//builder.Services.Configure<ConsumerConfig>(opt => builder.Configuration.GetSection(nameof(ConsumerConfig)).Bind(opt));
-builder.Services.AddHttpClient<HttpServices>().AddPolicyHandler(HttpClientHelper.GetRetryPolicy());
-//builder.Services.AddSingleton<KafkaProducer>();
-//builder.Services.AddHostedService<KafkaConsumer>();
-//builder.Services.AddSingleton<IHostedService,KafkaConsumer>();
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
@@ -138,7 +133,7 @@ app.Use(async (context, next) =>
         context.Request.Path = "/GlobalHandling/index";
         var handler = context.Features.Get<IExceptionHandlerPathFeature>();
         var log = context.RequestServices.GetService<Serilog.ILogger>();
-        log?.Error(handler?.Error.Message??$"Internl Server Error:{pathOri}");
+        log?.Error(handler?.Error.Message ?? $"Internl Server Error:{pathOri}");
     }
     await next();
 });

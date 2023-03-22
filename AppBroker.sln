@@ -15,6 +15,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Read Me", "Read Me", "{7E63
 		readme.md = readme.md
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MessagingQueue", "MessagingQueue\MessagingQueue.csproj", "{BC603718-6F20-46CD-AD8C-B160D300F40D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +35,10 @@ Global
 		{0F466CE9-3B20-45D0-9F98-0A7259AC263B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0F466CE9-3B20-45D0-9F98-0A7259AC263B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0F466CE9-3B20-45D0-9F98-0A7259AC263B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BC603718-6F20-46CD-AD8C-B160D300F40D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BC603718-6F20-46CD-AD8C-B160D300F40D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BC603718-6F20-46CD-AD8C-B160D300F40D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BC603718-6F20-46CD-AD8C-B160D300F40D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

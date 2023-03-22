@@ -21,8 +21,7 @@ namespace Infrastructure.Services.Kafka
 
             try
             {
-                using (var consumerBuilder = new ConsumerBuilder
-                <Ignore, string>(config).Build())
+                using (var consumerBuilder = new ConsumerBuilder<Ignore, string>(config).Build())
                 {
                     consumerBuilder.Subscribe("SignIn");
                     var cancelToken = new CancellationTokenSource();
@@ -31,8 +30,7 @@ namespace Infrastructure.Services.Kafka
                     {
                         while (true)
                         {
-                            var consumer = consumerBuilder.Consume
-                               (cancelToken.Token);
+                            var consumer = consumerBuilder.Consume(cancelToken.Token);
                             Console.WriteLine($"Processing Order Id:");
                         }
                     }

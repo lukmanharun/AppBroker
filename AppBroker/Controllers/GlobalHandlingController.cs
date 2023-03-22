@@ -7,7 +7,7 @@ namespace AppBroker.Controllers
         public GlobalHandlingController()
         {
         }
-        public IActionResult Index(bool? IsDataTable)
+        public IActionResult Index()
         {
             var handler = this.HttpContext.Features.Get<IExceptionHandlerPathFeature>();
             var message = handler?.Error?.Message ?? "Internal Server Error";

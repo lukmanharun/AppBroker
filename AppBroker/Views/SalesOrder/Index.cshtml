@@ -1,0 +1,37 @@
+﻿@{
+}
+<div class="card">
+
+    <div class="card-header">
+        <div class="row">
+            <div class="col">
+                <h4>User <b>Management</b></h4>
+            </div>
+            <div class="col">
+                <a class="btn btn-primary btn-lg float-end btn-sm m-1" href="/SalesOrder/AddNew">Add New</a>
+                <div class="btn-group float-end m-1">
+                    <button type="button" class="btn btn-primary btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                        Import
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="@Url.Action("DownloadTemplateImport","User")">Download Template</a></li>
+                        <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#shoUploadModal">Import Data</a></li>
+                    </ul>
+                </div>
+            </div>
+
+        </div>
+    </div>
+    <div class="card-body">
+        <table id="gridsalesorder" class="table table-striped" style="width:100%" cellspacing="0">
+            <thead>
+                <tr>
+                    <th>Transaction Code</th>
+                    <th>Transaction Date</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+        </table>
+    </div>
+</div>

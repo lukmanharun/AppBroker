@@ -27,7 +27,5 @@ public partial class AspNetUser
 
     public string? ModifiedBy { get; set; }
 
-    public DateTime? LastChanged { get; set; }
-
     public virtual ICollection<SalesOrderHd> SalesOrderHds { get; } = new List<SalesOrderHd>();
 }

@@ -22,9 +22,8 @@ namespace AppBroker.ViewComponentBase
         public async Task<IViewComponentResult> InvokeAsync(string? href)
         {
             var model = new ButtonAddNewModel();
-            model.href = href?? "#";
-            return View("Index", model);
+            model.href = href ?? "#"; 
+            return await Task.FromResult(View("Index", model));
         }
-
     }
 }

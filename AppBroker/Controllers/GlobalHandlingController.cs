@@ -10,7 +10,7 @@ namespace AppBroker.Controllers
         public IActionResult Index()
         {
             var handler = this.HttpContext.Features.Get<IExceptionHandlerPathFeature>();
-            var message = handler?.Error?.Message ?? "Internal Server Error";
+            var message = handler?.Error.InnerException?.Message?? handler?.Error?.Message ?? "Internal Server Error";
             ViewBag.Message = message;
             return View();
         }

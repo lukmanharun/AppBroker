@@ -1,10 +1,9 @@
 using AppBroker.Interfaces;
 using AppBroker.Services;
+using BusinessCore;
 using BusinessCore.Entity;
-using BusinessCore.Interfaces;
 using BusinessCore.Services;
 using Infrastructure.Data;
-using Infrastructure.DTO;
 using Infrastructure.Interfaces;
 using Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -68,6 +67,9 @@ builder.Services.AddAutoMapper(typeof(MapperProfile));
 builder.Services.AddScoped<IHelper, Helper>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IHelperService, HelperService>();
+builder.Services.AddScoped<IRepositoryService, RepositoryService>();
+builder.Services.AddScoped<ISalesOrderService, SalesOrderService>();
+builder.Services.AddScoped<ICounterService, CounterService>();
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(
         options =>
@@ -83,11 +85,11 @@ builder.Services.Configure<RazorViewEngineOptions>(o =>
     o.ViewLocationFormats.Add("{0}" + RazorViewEngine.ViewExtension);
 });
 //builder.Services.AddHttpContextAccessor();
-//Message broker DI
-builder.Services.Configure<RabbitMQConfiguration>(opt => builder.Configuration.GetSection(nameof(RabbitMQConfiguration)).Bind(opt));
-builder.Services.AddSingleton<IRabbitMQService, RabbitMQService>();
-builder.Services.AddSingleton<IMessageBrokerService, MessageBrokerService>();
-builder.Services.AddHostedService<ConsumerHostedService>();
+////Message broker DI
+//builder.Services.Configure<RabbitMQConfiguration>(opt => builder.Configuration.GetSection(nameof(RabbitMQConfiguration)).Bind(opt));
+//builder.Services.AddSingleton<IRabbitMQService, RabbitMQService>();
+//builder.Services.AddSingleton<IMessageBrokerService, MessageBrokerService>();
+//builder.Services.AddHostedService<ConsumerHostedService>();
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
@@ -133,7 +135,8 @@ app.Use(async (context, next) =>
         context.Request.Path = "/GlobalHandling/index";
         var handler = context.Features.Get<IExceptionHandlerPathFeature>();
         var log = context.RequestServices.GetService<Serilog.ILogger>();
-        log?.Error(handler?.Error.Message ?? $"Internl Server Error:{pathOri}");
+        var message = handler?.Error.InnerException?.Message ?? handler?.Error?.Message ?? "Internal Server Error";
+        log?.Error(message);
     }
     await next();
 });

@@ -1,18 +1,48 @@
-﻿@{
+﻿@model AppBroker.ViewComponentBase.GridListModel;
+@{
 }
-
-<div class="card-body">
-    <table id="gridusermanagement" class="table table-striped" style="width:100%" cellspacing="0">
-        <thead>
+<table id="usergrid" class="table table-striped" style="width:100%" cellspacing="0">
+    <thead>
+        <tr>
+            @foreach (var item in Model.Columns)
+            {
+                if (item.IsHidden)
+                {
+                    <th style="display:none">@item.DisplayName</th>
+                }
+                else
+                {
+                    <th>@item.DisplayName</th>
+                }
+            }
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.Data)
+        {
             <tr>
-                <th>User ID</th>
-                <th>First Name</th>
-                <th>Last Name</th>
-                <th>Email</th>
-                <th>Created</th>
-                @*<th>Created</th>*@
-                <th>Action</th>
+                @foreach (var rowcol in Model.Columns)
+                {
+                    if (rowcol.IsHidden)
+                    {
+                        <td style="display:none">@item[rowcol.Column].ToString()</td>
+                    }
+                    else
+                    {
+                        <td>@item[rowcol.Column].ToString()</td>
+                    }
+                }
             </tr>
-        </thead>
-    </table>
-</div>
+        }
+    </tbody>
+</table>
+<nav aria-label="Page navigation example">
+    <ul class="pagination">
+        <li class="page-item"><a class="page-link" href="#">Previous</a></li>
+        @for (int i = 1; i <= Model.RecordPagination; i++)
+        {
+            <li class="page-item"><a class="page-link" href="#">@i</a></li>
+        }
+        <li class="page-item"><a class="page-link" href="#">Next</a></li>
+    </ul>
+</nav>

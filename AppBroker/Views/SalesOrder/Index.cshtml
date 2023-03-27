@@ -1,35 +1,68 @@
-﻿@{
+﻿@section scripts
+    {
+    <script src="~/js/Jquery-3-5-1.js"></script>
+    <script src="~/js/Jquery-datatable.js"></script>
+    <script src="~/js/Jquery-datatable-bootstrap5.js"></script>
+    <script>
+        $('#gridSalesOrderHeader').DataTable({
+            ajax: {
+                url: '/SalesOrder/GetGridListHeader',
+                dataSrc: 'data',
+                type: 'post',
+                error: function (xhr, status, errorThrown) {
+                    window.location.href = "/GlobalHandling/Index";
+                }
+            },
+            processing: true,
+            serverSide: true,
+            search: {
+                return: true,
+            },
+            pageLength: 5,
+            lengthMenu: [5, 10, 20, 50, 100],
+            columns: [
+                { data: 'salesOrderCode' },
+                { data: 'salesOrderDateFormat' },
+                { data: 'totalAmount' },
+                { data: 'statusCode' },
+                {
+                    //adds td row for button
+                    data: null,
+                    render: function (data, type, row) {
+                        return '<td>'
+                            + '<a class="edit btn-sm" href="#" title="edit"><i class="material-icons">edit</i> </a>'
+                            + '<a class="delete btn-sm" href="#" title="delete"><i class="material-icons">delete</i> </a>'
+                            + '</td>';
+                    },
+                    orderable: false,
+                    searching: false
+                }
+            ]
+        });
+
+    </script>
 }
 <div class="card">
-
     <div class="card-header">
         <div class="row">
             <div class="col">
-                <h4>User <b>Management</b></h4>
+                <h4>Sales <b>Order</b></h4>
             </div>
             <div class="col">
-                <a class="btn btn-primary btn-lg float-end btn-sm m-1" href="/SalesOrder/AddNew">Add New</a>
-                <div class="btn-group float-end m-1">
-                    <button type="button" class="btn btn-primary btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                        Import
-                    </button>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="@Url.Action("DownloadTemplateImport","User")">Download Template</a></li>
-                        <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#shoUploadModal">Import Data</a></li>
-                    </ul>
-                </div>
+                @await Component.InvokeAsync("ButtonAddNew",new {href="/SalesOrder/AddNewSalesOrderHd"})
             </div>
 
         </div>
     </div>
     <div class="card-body">
-        <table id="gridsalesorder" class="table table-striped" style="width:100%" cellspacing="0">
+        <table id="gridSalesOrderHeader" class="table table-striped" style="width:100%" cellspacing="0">
             <thead>
                 <tr>
                     <th>Transaction Code</th>
                     <th>Transaction Date</th>
-                    <th>Amount</th>
+                    <th>Total Amount</th>
                     <th>Status</th>
+                    <th>Action</th>
                 </tr>
             </thead>
         </table>

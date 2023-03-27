@@ -1,6 +1,5 @@
 ﻿using AppBroker.Interfaces;
 using AutoMapper;
-using BusinessCore.Interfaces;
 using Infrastructure;
 using Magicodes.ExporterAndImporter.Core;
 using Magicodes.ExporterAndImporter.Excel;
@@ -11,13 +10,9 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Magicodes.ExporterAndImporter.Core.Models;
-using RabbitMQ.Client;
-using Infrastructure.Interfaces;
-using System.Text;
-using Newtonsoft.Json;
 using Microsoft.EntityFrameworkCore;
 using Infrastructure.Data;
-using Infrastructure.Entity;
+using BusinessCore;
 
 namespace AppBroker.Controllers
 {
@@ -28,13 +23,14 @@ namespace AppBroker.Controllers
         private readonly IMapper Mapper;
         private readonly IHelperService helperService;
         private readonly ILogger<UserController> logger;
-        private readonly IRabbitMQService rabbitMQService;
+        //private readonly IRabbitMQService rabbitMQService;
         private readonly AppDbContext dbContext;
         public UserController(IUserService userService, IMapper Mapper, IHelperService helperService
-            ,ILogger<UserController> logger, IRabbitMQService rabbitMQService, AppDbContext dbContext
+            ,ILogger<UserController> logger//, IRabbitMQService rabbitMQService
+            , AppDbContext dbContext
             )
         {
-            this.rabbitMQService = rabbitMQService;
+            //this.rabbitMQService = rabbitMQService;
             this.helperService = helperService;
             this.Mapper = Mapper;
             this.userService = userService;
@@ -79,8 +75,7 @@ namespace AppBroker.Controllers
                 {
                     new Claim(ClaimTypes.Sid, r.data.UserId),
                     new Claim(ClaimTypes.Name,r.data.Email),
-                    new Claim(ClaimTypes.Surname,r.data.LastName),
-                    new Claim(ClaimTypes.Version,r.data.LastChanged?.ToString()??"")
+                    new Claim(ClaimTypes.Surname,r.data.LastName)
                 };
                 var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
 
@@ -91,13 +86,13 @@ namespace AppBroker.Controllers
                 await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme,
                     new ClaimsPrincipal(claimsIdentity)
                     , authProperties);
-                using var connection = this.rabbitMQService.CreateChannel();
-                using var model = connection.CreateModel();
-                var jsonData = JsonConvert.SerializeObject(r.data);
-                var body = Encoding.UTF8.GetBytes(jsonData);
-                //var resultProduce = await this.kafkaProducer.ProduceAsync("SignIn",
-                //    new Message<string, string> { Value = jsonData, Key = Guid.NewGuid().ToString() });
-                model.BasicPublish("UserLoginExchange", string.Empty, basicProperties: null, body: body);
+                //using var connection = this.rabbitMQService.CreateChannel();
+                //using var model = connection.CreateModel();
+                //var jsonData = JsonConvert.SerializeObject(r.data);
+                //var body = Encoding.UTF8.GetBytes(jsonData);
+                ////var resultProduce = await this.kafkaProducer.ProduceAsync("SignIn",
+                ////    new Message<string, string> { Value = jsonData, Key = Guid.NewGuid().ToString() });
+                //model.BasicPublish("UserLoginExchange", string.Empty, basicProperties: null, body: body);
                 return Redirect("/User/UserManagement");
                 //return View(form);
             }

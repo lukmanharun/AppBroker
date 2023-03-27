@@ -18,6 +18,12 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<AspNetUser> AspNetUsers { get; set; }
 
+    public virtual DbSet<Counter> Counters { get; set; }
+
+    public virtual DbSet<CounterFormat> CounterFormats { get; set; }
+
+    public virtual DbSet<CounterNumber> CounterNumbers { get; set; }
+
     public virtual DbSet<SalesOrderDt> SalesOrderDts { get; set; }
 
     public virtual DbSet<SalesOrderHd> SalesOrderHds { get; set; }
@@ -37,7 +43,6 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.CreatedBy).HasMaxLength(50);
             entity.Property(e => e.Email).HasMaxLength(50);
             entity.Property(e => e.FirstName).HasMaxLength(50);
-            entity.Property(e => e.LastChanged).HasColumnType("datetime");
             entity.Property(e => e.LastName).HasMaxLength(50);
             entity.Property(e => e.ModifiedAt).HasColumnType("datetime");
             entity.Property(e => e.ModifiedBy).HasMaxLength(50);
@@ -45,6 +50,61 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.Version)
                 .IsRowVersion()
                 .IsConcurrencyToken();
+        });
+
+        modelBuilder.Entity<Counter>(entity =>
+        {
+            entity.HasKey(e => e.CounterCode);
+
+            entity.ToTable("Counter");
+
+            entity.Property(e => e.CounterCode).HasMaxLength(50);
+            entity.Property(e => e.CreatedAt).HasColumnType("datetime");
+            entity.Property(e => e.CreatedBy).HasMaxLength(50);
+            entity.Property(e => e.ModifiedAt).HasColumnType("datetime");
+            entity.Property(e => e.ModifiedBy).HasMaxLength(50);
+            entity.Property(e => e.Version)
+                .IsRowVersion()
+                .IsConcurrencyToken();
+        });
+
+        modelBuilder.Entity<CounterFormat>(entity =>
+        {
+            entity.ToTable("CounterFormat");
+
+            entity.Property(e => e.CounterCode).HasMaxLength(50);
+            entity.Property(e => e.CreatedAt).HasColumnType("datetime");
+            entity.Property(e => e.CreatedBy).HasMaxLength(50);
+            entity.Property(e => e.ModifiedAt).HasColumnType("datetime");
+            entity.Property(e => e.ModifiedBy).HasMaxLength(50);
+            entity.Property(e => e.Value).HasMaxLength(50);
+            entity.Property(e => e.Version)
+                .IsRowVersion()
+                .IsConcurrencyToken();
+
+            entity.HasOne(d => d.CounterCodeNavigation).WithMany(p => p.CounterFormats)
+                .HasForeignKey(d => d.CounterCode)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_CounterFormat_Counter");
+        });
+
+        modelBuilder.Entity<CounterNumber>(entity =>
+        {
+            entity.ToTable("CounterNumber");
+
+            entity.Property(e => e.CounterCode).HasMaxLength(50);
+            entity.Property(e => e.CreatedAt).HasColumnType("datetime");
+            entity.Property(e => e.CreatedBy).HasMaxLength(50);
+            entity.Property(e => e.ModifiedAt).HasColumnType("datetime");
+            entity.Property(e => e.ModifiedBy).HasMaxLength(50);
+            entity.Property(e => e.Version)
+                .IsRowVersion()
+                .IsConcurrencyToken();
+
+            entity.HasOne(d => d.CounterCodeNavigation).WithMany(p => p.CounterNumbers)
+                .HasForeignKey(d => d.CounterCode)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_CounterNumber_Counter");
         });
 
         modelBuilder.Entity<SalesOrderDt>(entity =>

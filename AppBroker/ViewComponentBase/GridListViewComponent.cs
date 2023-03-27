@@ -1,25 +1,30 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Newtonsoft.Json.Linq;
-using Newtonsoft.Json;
-using System.Text.Json;
 using Infrastructure.Data;
+using Infrastructure.Services;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using OfficeOpenXml.FormulaParsing.Excel.Functions.Text;
 
 namespace AppBroker.ViewComponentBase
 {
     public sealed class GridListModel
     {
-        public GridColumnModel[] Columns { get; set; }
-        public object[] Values { get; set; }
+        public required GridColumnModel[] Columns { get; set; }
+        public required JArray Data { get; set; }
+        public int RecordsTotal { get; set; }
+        public int RecordsFiltered { get; set; }
+        public decimal PageLength { get; set; }
+        public decimal RecordPagination { get; set; }
     }
     public sealed class GridColumnModel
     {
-        public string Name { get; set; }
-        public object Value { get; set; }
-        public string DisplayName { get; set; }
+        public required string Column { get; set; }
+        public required string DisplayName { get; set; }
         public bool IsAllowSort { get; set; } = true;
+        public bool IsAllowSearch { get; set; } = true;
+        public bool IsHidden { get; set; } = false;
     }
-
     [ViewComponent(Name ="GridList")]
     public class GridListViewComponent : ViewComponent
     {
@@ -30,21 +35,72 @@ namespace AppBroker.ViewComponentBase
         }
         public async Task<IViewComponentResult> InvokeAsync()
         {
-            var data = await dbContext.AspNetUsers.ToListAsync();
-            GridListModel grid = new GridListModel();
-            string jsonData = JsonConvert.SerializeObject(data);
-            if (jsonData == null) return View("Index");
-            JArray parsedArray = (JArray)JsonConvert.DeserializeObject(jsonData);
-            foreach (JObject parsedObject in parsedArray.Children<JObject>())
+            var data = await dbContext.AspNetUsers.Select(s=> new
             {
-                foreach (JProperty parsedProperty in parsedObject.Properties())
-                {
-                    string propertyName = parsedProperty.Name;
-                    JValue propertyValue = (JValue)parsedProperty.Value;
+                UserId = s.UserId,
+                FirstName = s.FirstName,
+                LastName = s.LastName,
+                Email = s.Email,
+                CreatedAt = s.CreatedAt
+            }).AsNoTracking().Skip(0).Take(5).ToListAsync();
+            var datacount = await dbContext.AspNetUsers.CountAsync();
+            string jsonData = JsonConvert.SerializeObject(data);
 
+            JArray parsedArray = (JArray)JsonConvert.DeserializeObject(jsonData);
+            var columns = new GridColumnModel[]
+            {
+                new GridColumnModel
+                {
+                    Column = "UserId",
+                    DisplayName = "UserId",
+                    IsAllowSearch = false,
+                    IsAllowSort = false,
+                    IsHidden = true,
+                },
+                new GridColumnModel
+                {
+                    Column = "FirstName",
+                    DisplayName = "First Name",
+                    IsAllowSearch = true,
+                    IsAllowSort = true,
+                    IsHidden = false,
+                },
+                new GridColumnModel
+                {
+                    Column = "LastName",
+                    DisplayName = "Last Name",
+                    IsAllowSearch = true,
+                    IsAllowSort = true,
+                    IsHidden = false,
+                },
+                new GridColumnModel
+                {
+                    Column = "Email",
+                    DisplayName = "Email",
+                    IsAllowSearch = true,
+                    IsAllowSort = true,
+                    IsHidden = false,
                 }
-            }
-            return View("Index");
+                ,new GridColumnModel
+                {
+                    Column = "CreatedAt",
+                    DisplayName = "Created",
+                    IsAllowSearch = true,
+                    IsAllowSort = true,
+                    IsHidden = false,
+                }
+            };
+            decimal PageLength = 5;
+            GridListModel gridList = new GridListModel()
+            { 
+                Data = parsedArray,
+                Columns = columns,
+                PageLength = PageLength,
+                RecordsTotal = datacount,
+                RecordsFiltered = datacount,
+                RecordPagination = Math.Round((datacount / PageLength),MidpointRounding.AwayFromZero)
+            };
+            return View("Index",gridList);
         }
     }
 }

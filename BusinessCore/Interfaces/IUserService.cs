@@ -3,7 +3,7 @@ using Infrastructure.Entity;
 using Magicodes.ExporterAndImporter.Core.Models;
 using Microsoft.AspNetCore.Http;
 
-namespace BusinessCore.Interfaces
+namespace BusinessCore
 {
     public interface IUserService
     {

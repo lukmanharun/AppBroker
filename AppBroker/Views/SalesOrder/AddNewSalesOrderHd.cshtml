@@ -1,0 +1,16 @@
+﻿@model AppBroker.Models.SalesOrderHdModel;
+@{
+}
+
+@using (Html.BeginForm("AddNewSalesOrderHd", "SalesOrder", HttpMethod.Post))
+{
+    @Html.AntiForgeryToken()
+    <div class="form-floating mb-3">
+        @Html.EditorFor(s=>s.SalesOrderDate,new {htmlAttributes = new {@class="form-control",@type="date",@placeholder=""} })
+        <label for="SalesOrderDate">Sales Order Date</label>
+        @Html.ValidationMessageFor(s=>s.SalesOrderDate)
+    </div>
+    <div class="text-center mb-3">
+        <button type="submit" value="submit" class="btn btn-primary" style="width:100%">Submit</button>
+    </div>
+}

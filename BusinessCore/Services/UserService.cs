@@ -1,7 +1,5 @@
 ﻿using AutoMapper;
-using BusinessCore.Interfaces;
 using Infrastructure;
-using Infrastructure.Data;
 using Infrastructure.Entity;
 using Infrastructure.Interfaces;
 using Infrastructure.Services;
@@ -13,21 +11,21 @@ namespace BusinessCore.Services
 {
     public class UserService : IUserService
     {
-        private readonly AppDbContext dbcontext;
         private readonly IMapper mapper;
         private readonly IHelper helper;
         private readonly IConfiguration configuration;
-        public UserService(AppDbContext dbcontext,IMapper mapper, IHelper helper, IConfiguration configuration)
+        private readonly IRepositoryService repositoryService;
+        public UserService(IMapper mapper, IHelper helper, IConfiguration configuration, IRepositoryService repositoryService)
         {
             this.configuration = configuration;
             this.helper = helper;
-            this.dbcontext = dbcontext;
             this.mapper = mapper;
+            this.repositoryService = repositoryService;
         }
 
         public async Task<GridDataTable<UserListDTO>> GridListUserQueryrable(IFormCollection form)
         {
-            return await dbcontext.AspNetUsers.Select(s => new UserListDTO
+            return await repositoryService.Queryrable<AspNetUser>().Select(s => new UserListDTO
             {
                 FirstName = s.FirstName,
                 LastName = s.LastName,
@@ -43,7 +41,7 @@ namespace BusinessCore.Services
         }
         public async Task<AspNetUser> GetUserByUserId(string UserId)
         {
-            var data = await dbcontext.AspNetUsers.Where(s=>s.UserId == UserId).AsNoTracking()
+            var data = await repositoryService.Queryrable<AspNetUser>().Where(s=>s.UserId == UserId).AsNoTracking()
                 .FirstOrDefaultAsync();
             if (data == null) return new AspNetUser();
             var response = mapper.Map<AspNetUser>(data);
@@ -53,7 +51,7 @@ namespace BusinessCore.Services
         public async Task<List<UserimportDto>> ImportUser(List<UserimportDto> data,string userid)
         {
             var emails = data.Select(s => s.Email);
-            var emailExist = await dbcontext.AspNetUsers.Where(s => emails.Contains(s.Email)).AsNoTracking().ToListAsync();
+            var emailExist = await repositoryService.Queryrable<AspNetUser>().Where(s => emails.Contains(s.Email)).AsNoTracking().ToListAsync();
             if(emailExist.Count()>0)
             {
                 foreach (var item in emailExist)
@@ -71,13 +69,13 @@ namespace BusinessCore.Services
                 s.PasswordHash = helper.GenerateHash(s.PasswordHash);
                 s.UserId = Guid.NewGuid().ToString();
             });
-            await dbcontext.AspNetUsers.AddRangeAsync(dataImport);
-            await dbcontext.SaveChangesAsync();
+            await repositoryService.AddRangeAsync<AspNetUser>(dataImport);
+            await repositoryService.SaveChangesAsync();
             return data;
         }
         public async Task<List<AspNetUser>> ExportUserManagement()
         {
-            return await dbcontext.AspNetUsers.Select(s=> new AspNetUser
+            return await repositoryService.Queryrable<AspNetUser>().Select(s=> new AspNetUser
             {
                 FirstName = s.FirstName,
                 LastName = s.LastName,
@@ -86,17 +84,17 @@ namespace BusinessCore.Services
         }
         public async Task DeleteUser(string userid)
         {
-            var data = await dbcontext.AspNetUsers.Where(s => s.UserId == userid).AsNoTracking().FirstOrDefaultAsync();
+            var data = await repositoryService.Queryrable<AspNetUser>().Where(s => s.UserId == userid).AsNoTracking().FirstOrDefaultAsync();
             if (data == null)
             {
                 throw new Exception("User not found");
             }
-            dbcontext.AspNetUsers.Remove(data);
-            await dbcontext.SaveChangesAsync();
+            repositoryService.Remove<AspNetUser>(data);
+            await repositoryService.SaveChangesAsync();
         }
         public async Task EditUser(UserEditSubmitDTO form, string userid)
         {
-            var data = await dbcontext.AspNetUsers.Where(s => s.UserId == form.UserId).AsNoTracking().FirstOrDefaultAsync();
+            var data = await repositoryService.Queryrable<AspNetUser>().Where(s => s.UserId == form.UserId).AsNoTracking().FirstOrDefaultAsync();
             if (data == null)
             {
                 throw new Exception("User not found");
@@ -106,13 +104,13 @@ namespace BusinessCore.Services
             data.Email = form.Email;
             data.ModifiedAt = DateTime.Now;
             data.ModifiedBy = userid;
-            dbcontext.AspNetUsers.Update(data);
-            await dbcontext.SaveChangesAsync();
+            repositoryService.Update<AspNetUser>(data);
+            await repositoryService.SaveChangesAsync();
         }
         public async Task AddNewUser(RegisterDTO form,string userid)
         {
             var data = mapper.Map<AspNetUser>(form);
-            var isExist = await dbcontext.AspNetUsers.Where(s => s.Email == data.Email).AsNoTracking().AnyAsync();
+            var isExist = await repositoryService.Queryrable<AspNetUser>().Where(s => s.Email == data.Email).AsNoTracking().AnyAsync();
             if (isExist)
             {
                 throw new Exception("Email is Exist");
@@ -121,13 +119,13 @@ namespace BusinessCore.Services
             data.CreatedBy = userid;
             data.UserId = Guid.NewGuid().ToString();
             data.PasswordHash = helper.GenerateHash(form.Password);
-            await dbcontext.AspNetUsers.AddAsync(data);
-            await dbcontext.SaveChangesAsync();
+            await repositoryService.AddAsync(data);
+            await repositoryService.SaveChangesAsync();
         }
         public async Task RegisterAsync(RegisterDTO form)
         {
             var data = mapper.Map<AspNetUser>(form);
-            var isExist = await dbcontext.AspNetUsers.Where(s => s.Email == data.Email).AnyAsync();
+            var isExist = await repositoryService.Queryrable<AspNetUser>().Where(s => s.Email == data.Email).AnyAsync();
             if(isExist) 
             {
                 throw new Exception("Email is Exist");
@@ -136,13 +134,13 @@ namespace BusinessCore.Services
             data.CreatedBy = "Guest";
             data.UserId = Guid.NewGuid().ToString();
             data.PasswordHash = helper.GenerateHash(form.Password);
-            await dbcontext.AspNetUsers.AddAsync(data);
-            await dbcontext.SaveChangesAsync();
+            await repositoryService.AddAsync(data);
+            await repositoryService.SaveChangesAsync();
         }
         public async Task<(bool success,AspNetUser data,Dictionary<string, string> errors)> Authentication(SignInDTO form)
         {
             form.Password = helper.GenerateHash(form.Password);
-            var data = await dbcontext.AspNetUsers.Where(s => s.Email == form.Email )
+            var data = await repositoryService.Queryrable<AspNetUser>().Where(s => s.Email == form.Email )
                 .FirstOrDefaultAsync();
             if (data == null)
             {

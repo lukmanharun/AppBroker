@@ -148,7 +148,7 @@ namespace Infrastructure.Services
             {
                 listExpressionMonth.Add(Expression.Equal(Expression.Property(param, "Month"), Expression.Constant(item.Value)));
             }
-            BinaryExpression expresionMonth = listExpressionMonth.Aggregate((prev, current) => Expression.Or(prev, current));
+            BinaryExpression? expresionMonth = listExpressionMonth.Count() == 0? null: listExpressionMonth.Aggregate((prev, current) => Expression.Or(prev, current));
 
             if (DayOrYear > 0)
             {
@@ -164,6 +164,7 @@ namespace Infrastructure.Services
             {
                 //Pattern dd MMMM
                 var res = Expression.Equal(Expression.Property(param, "Day"), Expression.Constant(day));
+                if (expresionMonth == null) return res;
                 Expression result = new Expression[]
                 {
                     expresionMonth,res
@@ -174,6 +175,7 @@ namespace Infrastructure.Services
             {
                 //Pattern MMMM yyyy
                 var res = Expression.Equal(Expression.Property(param, "Year"), Expression.Constant(year));
+                if (expresionMonth == null) return res;
                 Expression result = new Expression[]
                 {
                     expresionMonth,res
